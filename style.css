@@ -436,6 +436,24 @@ body {
   color: #ffffff;
 }
 
+/* Source Chip Pastel Badges */
+.source-chip.source-theme-shara:not(.active) { background-color: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+.source-chip.source-theme-raphael:not(.active) { background-color: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+.source-chip.source-theme-salvatore:not(.active) { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.source-chip.source-theme-souzette:not(.active) { background-color: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+.source-chip.source-theme-malka:not(.active) { background-color: #faf5ff; border-color: #e9d5ff; color: #6b21a8; }
+.source-chip.source-theme-meir:not(.active) { background-color: #ecfeff; border-color: #a5f3fc; color: #155e75; }
+.source-chip.source-theme-nissim:not(.active) { background-color: #fefce8; border-color: #fef08a; color: #854d0e; }
+
+.source-chip.source-theme-shara.active { background-color: #e11d48; border-color: #e11d48; color: #fff; }
+.source-chip.source-theme-raphael.active { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+.source-chip.source-theme-salvatore.active { background-color: #16a34a; border-color: #16a34a; color: #fff; }
+.source-chip.source-theme-souzette.active { background-color: #ea580c; border-color: #ea580c; color: #fff; }
+.source-chip.source-theme-malka.active { background-color: #9333ea; border-color: #9333ea; color: #fff; }
+.source-chip.source-theme-meir.active { background-color: #0891b2; border-color: #0891b2; color: #fff; }
+.source-chip.source-theme-nissim.active { background-color: #ca8a04; border-color: #ca8a04; color: #fff; }
+
+
 /* View Mode Switcher */
 .view-mode-group {
   display: flex;
@@ -623,6 +641,75 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* Source Pastel Background Themes (Light & Elegant) */
+.scene-card.source-theme-shara {
+  background-color: #fff1f2;
+  border-color: #fecdd3;
+}
+.scene-card.source-theme-shara:hover {
+  border-color: #fb7185;
+  box-shadow: 0 6px 14px -2px rgba(225, 29, 72, 0.15);
+}
+
+.scene-card.source-theme-raphael {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+}
+.scene-card.source-theme-raphael:hover {
+  border-color: #60a5fa;
+  box-shadow: 0 6px 14px -2px rgba(37, 99, 235, 0.15);
+}
+
+.scene-card.source-theme-salvatore {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.scene-card.source-theme-salvatore:hover {
+  border-color: #4ade80;
+  box-shadow: 0 6px 14px -2px rgba(22, 163, 74, 0.15);
+}
+
+.scene-card.source-theme-souzette {
+  background-color: #fff7ed;
+  border-color: #fed7aa;
+}
+.scene-card.source-theme-souzette:hover {
+  border-color: #fb923c;
+  box-shadow: 0 6px 14px -2px rgba(234, 88, 12, 0.15);
+}
+
+.scene-card.source-theme-malka {
+  background-color: #faf5ff;
+  border-color: #e9d5ff;
+}
+.scene-card.source-theme-malka:hover {
+  border-color: #c084fc;
+  box-shadow: 0 6px 14px -2px rgba(147, 51, 234, 0.15);
+}
+
+.scene-card.source-theme-meir {
+  background-color: #ecfeff;
+  border-color: #a5f3fc;
+}
+.scene-card.source-theme-meir:hover {
+  border-color: #22d3ee;
+  box-shadow: 0 6px 14px -2px rgba(8, 145, 178, 0.15);
+}
+
+.scene-card.source-theme-nissim {
+  background-color: #fefce8;
+  border-color: #fef08a;
+}
+.scene-card.source-theme-nissim:hover {
+  border-color: #facc15;
+  box-shadow: 0 6px 14px -2px rgba(202, 138, 4, 0.15);
+}
+
+.scene-card.source-theme-generic {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
 /* Dragging States */
 .scene-card.dragging {
   opacity: 0.45;
@@ -792,31 +879,34 @@ body {
 .pov-generic { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
 
 .location-pill {
-  background: var(--bg-subtle);
+  background: rgba(255, 255, 255, 0.9);
   color: #334155;
-  border: 1px solid var(--border-light);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .time-pill {
-  background: var(--bg-subtle);
+  background: rgba(255, 255, 255, 0.9);
   color: #475569;
-  border: 1px solid var(--border-light);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 /* Synopsis / Summary */
 .scene-summary {
   font-size: 0.78rem;
-  color: #334155;
+  color: #1e293b;
   line-height: 1.45;
   white-space: pre-line;
 }
 
 /* Revealed Information Section */
 .revealed-info-box {
-  background: #fdfbf7;
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid #fde047;
   border-right: 3px solid #eab308;
   border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   padding: 0.4rem 0.55rem;
   display: flex;
   flex-direction: column;

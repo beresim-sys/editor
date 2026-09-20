@@ -369,9 +369,23 @@
     return 'pov-generic';
   }
 
+  function getSourceThemeClass(sourceText) {
+    if (!sourceText) return 'source-theme-generic';
+    const s = sourceText.trim();
+    if (s.includes('שרה')) return 'source-theme-shara';
+    if (s.includes('רפאל')) return 'source-theme-raphael';
+    if (s.includes('סלווטור')) return 'source-theme-salvatore';
+    if (s.includes('סוזט')) return 'source-theme-souzette';
+    if (s.includes('מלכה')) return 'source-theme-malka';
+    if (s.includes('מאיר')) return 'source-theme-meir';
+    if (s.includes('ניסים')) return 'source-theme-nissim';
+    return 'source-theme-generic';
+  }
+
   function createSceneCardElement(scene, sequenceNum) {
     const card = document.createElement('article');
-    card.className = 'scene-card';
+    const sourceThemeClass = getSourceThemeClass(scene.source);
+    card.className = `scene-card ${sourceThemeClass}`;
     card.setAttribute('draggable', 'true');
     card.dataset.id = scene.id;
 
@@ -614,8 +628,9 @@
       `];
 
       uniqueSources.forEach(src => {
+        const themeClass = getSourceThemeClass(src);
         sourceChipsHtml.push(`
-          <button class="source-chip ${state.filters.source === src ? 'active' : ''}" data-source="${escapeHtml(src)}">
+          <button class="source-chip ${themeClass} ${state.filters.source === src ? 'active' : ''}" data-source="${escapeHtml(src)}">
             ${escapeHtml(src)} <span class="chip-count">${sourceCounts[src]}</span>
           </button>
         `);
