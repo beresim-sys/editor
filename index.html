@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח עריכה וסידור סצנות לספר | Scene Flow Editor</title>
+
+  <!-- Google Fonts for Modern Hebrew Editorial Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Application Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-section">
+          <div class="brand-logo-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <div class="brand-titles">
+            <h1>לוח עריכת סצנות לספר</h1>
+            <span class="tagline">סידור עלילתי, מעקב נקודות מבט (POV), וחשיפת מידע</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btnSyncSheets" title="חבר או טען נתונים מטבלת Google Sheets">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span>טעינה מ-Google Sheets</span>
+          </button>
+
+          <button class="btn btn-secondary" id="btnResetOrder" title="שחזר את סדר הסצנות המקורי">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>איפוס סדר</span>
+          </button>
+
+          <button class="btn btn-secondary" id="btnExport" title="ייצוא הסדר החדש או העתקה ללוח">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+            </svg>
+            <span>ייצוא הסדר החדש</span>
+          </button>
+
+          <button class="btn btn-primary" id="btnAddScene" title="הוסף סצנה חדשה ללוח">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>סצנה חדשה</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Toolbar: Search, Filters, and View Modes -->
+    <section class="toolbar-section">
+      <div class="toolbar-inner">
+        <!-- Search Input -->
+        <div class="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חופשי (כותרת, תקציר, מידע שנחשף, מקום)..." aria-label="חיפוש סצנה">
+          <button id="searchClearBtn" class="search-clear-btn" title="נקה חיפוש">&times;</button>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+          <!-- POV Filter Chips -->
+          <div class="pov-chips-container" id="povChipsContainer">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Location Dropdown -->
+          <select id="locationFilterSelect" class="filter-select" aria-label="סינון לפי מקום">
+            <option value="all">כל המקומות</option>
+          </select>
+
+          <!-- Time Dropdown -->
+          <select id="timeFilterSelect" class="filter-select" aria-label="סינון לפי זמן עלילתי">
+            <option value="all">כל הזמנים העלילתיים</option>
+          </select>
+        </div>
+
+        <!-- View Mode Switcher -->
+        <div class="view-mode-group">
+          <button id="viewGridBtn" class="view-mode-btn active" title="תצוגת רשת כרטיסיות">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>רשת</span>
+          </button>
+          <button id="viewTimelineBtn" class="view-mode-btn" title="תצוגת ציר עלילה כרונולוגי">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 3v6m0 6v6"/></svg>
+            <span>ציר רציף</span>
+          </button>
+          <button id="viewCompactBtn" class="view-mode-btn" title="תצוגה קומפקטית לסידור מהיר">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+            <span>קומפקטי</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Status / Info Bar -->
+    <div class="status-bar">
+      <div class="stats-left">
+        <span class="stat-pill">סה"כ סצנות: <strong id="totalScenesCount">0</strong></span>
+        <span id="filteredCountDisplay" style="color: var(--primary); font-weight: 600;"></span>
+        <span class="active-filter-badge" id="activeFilterBadge" style="display: none;">
+          <span id="activeFilterText"></span>
+          <a href="javascript:void(0)" id="clearFiltersBtn" class="clear-filters-link">(נקה סינונים)</a>
+        </span>
+      </div>
+      <div>
+        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות כדי לסדר מחדש את רצף העלילה</span>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+      <!-- Container for Scene Cards (Rendered via JS) -->
+      <div id="scenesContainer" class="scenes-container grid-view">
+        <!-- Rendered by app.js -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+        <h3>לא נמצאו סצנות תואמות</h3>
+        <p>נסה לשנות את מילות החיפוש או לאפס את הסינונים הנבחרים.</p>
+        <button class="btn btn-secondary" onclick="document.getElementById('clearFiltersBtn').click()">נקה את כל הסינונים</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 1: Google Sheets Connection & Import
+       ========================================================================== -->
+  <div class="modal-overlay" id="sheetsModal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>חיבור וטעינה מטבלת Google Sheets</h3>
+        <button class="modal-close-btn" aria-label="סגור">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-box">
+          <strong>כיצד לטעון את הטבלה שלך?</strong>
+          <ol>
+            <li>בטבלת Google Sheets שלך, לחץ על <code>שיתוף (Share)</code> ושנה ל-<code>כל מי שקיבל את הקישור יכול לצפות</code>.</li>
+            <li>או לחץ על <code>קובץ (File)</code> &gt; <code>שיתוף</code> &gt; <code>פרסם באינטרנט (Publish to web)</code> &gt; בחר בפורמט <code>ערכים מופרדים בפסיקים (.csv)</code>.</li>
+            <li>הדבק את הקישור בתיבה מטה ולחץ על <strong>טען נתונים</strong>.</li>
+          </ol>
+        </div>
+
+        <div class="form-group">
+          <label for="sheetUrlInput">קישור לטבלת Google Sheets (URL):</label>
+          <input type="url" id="sheetUrlInput" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
+          <span class="field-hint">המערכת תמפה אוטומטית עמודות לפי שמות: מזהה, כותרת, נקודת מבט (POV), מקום, זמן, תקציר, מידע שנחשף, מקור.</span>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <button class="btn btn-primary" id="btnFetchSheet" style="flex: 1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <span>טען נתונים מהקישור</span>
+          </button>
+        </div>
+
+        <hr style="border: none; border-top: 1px dashed var(--border-light); margin: 0.5rem 0;">
+
+        <div class="form-group">
+          <label>או טען מקובץ מקומי (CSV / גיבוי):</label>
+          <input type="file" id="csvFileInput" accept=".csv" class="form-input" style="padding: 0.4rem;">
+        </div>
+
+        <div style="text-align: center; margin-top: 0.5rem;">
+          <button class="btn btn-ghost" id="btnLoadDefaultData" style="font-size: 0.82rem;">
+            <span>שחזר נתוני דוגמה עשירים (8 סצנות מובנות)</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-modal-cancel">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: Add / Edit Scene
+       ========================================================================== -->
+  <div class="modal-overlay" id="sceneModal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="sceneModalTitle">עריכת סצנה</h3>
+        <button class="modal-close-btn" aria-label="סגור">&times;</button>
+      </div>
+      <form id="sceneForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inputSceneId">מזהה סצנה (ID):</label>
+              <input type="text" id="inputSceneId" class="form-input" required placeholder="למשל SC-01">
+            </div>
+            <div class="form-group" style="flex: 2;">
+              <label for="inputSceneTitle">כותרת הסצנה:</label>
+              <input type="text" id="inputSceneTitle" class="form-input" required placeholder="כותרת בולטת לסצנה">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inputScenePov">נקודת מבט (POV):</label>
+              <input type="text" id="inputScenePov" class="form-input" placeholder="שם הדמות (שרה, רפאל...)">
+            </div>
+            <div class="form-group">
+              <label for="inputSceneLocation">מקום:</label>
+              <input type="text" id="inputSceneLocation" class="form-input" placeholder="למשל רציף הנמל, בית הקפה">
+            </div>
+            <div class="form-group">
+              <label for="inputSceneTime">זמן עלילתי:</label>
+              <input type="text" id="inputSceneTime" class="form-input" placeholder="למשל אוקטובר 1940, בין ערביים">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputSceneSummary">תקציר העלילה:</label>
+            <textarea id="inputSceneSummary" class="form-textarea" rows="3" placeholder="מה מתרחש בסצנה?"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="inputSceneRevealed">מידע שנחשף בסצנה:</label>
+            <textarea id="inputSceneRevealed" class="form-textarea" rows="2" placeholder="סודות, גילויים או מידע חדש שנחשף לדמויות או לקורא"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="inputSceneSource">מקור / הערות טיוטה:</label>
+            <input type="text" id="inputSceneSource" class="form-input" placeholder="קישור לטיוטה, עמוד, או מקור היסטורי">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">ביטול</button>
+          <button type="submit" class="btn btn-primary">שמור שינויים</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 3: Export
+       ========================================================================== -->
+  <div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>ייצוא סדר הסצנות המעודכן</h3>
+        <button class="modal-close-btn" aria-label="סגור">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted);">
+          להלן רצף הסצנות המסודר לפי הסדר שקבעת בלוח הגרירה. תוכל להעתיק כטקסט מעוצב, להעתיק כטבלה מוכנה להדבקה ב-Google Sheets, או להוריד כקובץ.
+        </p>
+
+        <div class="form-group">
+          <label>תצוגה מקדימה של הרצף:</label>
+          <textarea id="exportPreviewText" class="form-textarea" rows="8" readonly style="font-family: monospace; font-size: 0.82rem; background: var(--bg-main);"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <button class="btn btn-primary" id="btnCopyFormatted">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <span>העתק תקציר מעוצב ללוח</span>
+          </button>
+          
+          <button class="btn btn-accent" id="btnCopyCsv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+            <span>העתק טבלה (להדבקה ב-Sheets)</span>
+          </button>
+
+          <button class="btn btn-secondary" id="btnDownloadCsv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>הורד קובץ טבלה (CSV עם UTF-8)</span>
+          </button>
+
+          <button class="btn btn-secondary" id="btnDownloadJson">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+            <span>הורד קובץ גיבוי מלא (JSON)</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-modal-cancel">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="scenes-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
