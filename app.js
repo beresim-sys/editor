@@ -7,8 +7,57 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v6 to guarantee pure scene_1..scene_124 IDs) ---
-  const STORAGE_KEY = 'book_scenes_editor_v6';
+  // --- Storage Key (bumped to v7 to guarantee formatted Hebrew dates for timeline) ---
+  const STORAGE_KEY = 'book_scenes_editor_v7';
+
+  /**
+   * Formats timeline value, converting numeric Excel serial dates (e.g. 16681 -> "ספט' 45")
+   * or SheetJS English representations (e.g. "Sep-45" -> "ספט' 45") into Hebrew month-year format.
+   * Leaves plain years (1921, 1926) and existing textual dates untouched.
+   */
+  function formatTimelineValue(val) {
+    if (val === null || val === undefined) return '';
+    const str = String(val).trim();
+    if (!str) return '';
+
+    // Plain 4-digit year like "1921", "1942" - leave as is
+    if (/^\d{4}$/.test(str)) {
+      return str;
+    }
+
+    const monthNames = [
+      "ינו'", "פבר'", "מרץ", "אפר'", "מאי", "יוני",
+      "יולי", "אוג'", "ספט'", "אוק'", "נוב'", "דצמ'"
+    ];
+
+    // Excel 1900 date system serial numbers (e.g. 13271 to 60000)
+    const num = Number(str);
+    if (!isNaN(num) && num >= 10000 && num <= 60000 && /^\d+$/.test(str)) {
+      const jsDate = new Date(Math.round((num - 25569) * 86400 * 1000));
+      if (!isNaN(jsDate.getTime())) {
+        const monthHeb = monthNames[jsDate.getUTCMonth()];
+        const yearShort = String(jsDate.getUTCFullYear()).slice(-2);
+        return `${monthHeb} ${yearShort}`;
+      }
+    }
+
+    // English month-year patterns (e.g. "Sep-45", "Jul-42", "May-36", "Oct-49")
+    const engDateMatch = str.match(/^([A-Za-z]{3})[-/ ](\d{2,4})$/);
+    if (engDateMatch) {
+      const engMonths = {
+        'jan': "ינו'", 'feb': "פבר'", 'mar': "מרץ", 'apr': "אפר'",
+        'may': "מאי", 'jun': "יוני", 'jul': "יולי", 'aug': "אוג'",
+        'sep': "ספט'", 'oct': "אוק'", 'nov': "נוב'", 'dec': "דצמ'"
+      };
+      const m = engMonths[engDateMatch[1].toLowerCase()];
+      if (m) {
+        const yr = engDateMatch[2].length === 4 ? engDateMatch[2].slice(-2) : engDateMatch[2];
+        return `${m} ${yr}`;
+      }
+    }
+
+    return str;
+  }
 
   /**
    * Guarantees every scene has a strictly unique, valid ID and cleaned fields
@@ -33,7 +82,7 @@
         title: (scene.title && typeof scene.title === 'string') ? scene.title.trim() : `סצנה ${idx + 1}`,
         pov: (scene.pov && typeof scene.pov === 'string') ? scene.pov.trim() : '',
         location: (scene.location && typeof scene.location === 'string') ? scene.location.trim() : '',
-        time: (scene.time && typeof scene.time === 'string') ? scene.time.trim() : '',
+        time: formatTimelineValue(scene.time),
         summary: (scene.summary && typeof scene.summary === 'string') ? scene.summary.trim() : '',
         revealedInfo: (scene.revealedInfo && typeof scene.revealedInfo === 'string') ? scene.revealedInfo.trim() : '',
         source: (scene.source && typeof scene.source === 'string') ? scene.source.trim() : ''
@@ -294,7 +343,7 @@
       const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : '';
       const pov = headerMap.pov !== undefined && row[headerMap.pov] ? String(row[headerMap.pov]).trim() : '';
       const location = headerMap.location !== undefined && row[headerMap.location] ? String(row[headerMap.location]).trim() : '';
-      const time = headerMap.time !== undefined && row[headerMap.time] ? String(row[headerMap.time]).trim() : '';
+      const time = headerMap.time !== undefined && row[headerMap.time] !== undefined && row[headerMap.time] !== null ? formatTimelineValue(row[headerMap.time]) : '';
       const summary = headerMap.summary !== undefined && row[headerMap.summary] ? String(row[headerMap.summary]).trim() : '';
       const revealedInfo = headerMap.revealedInfo !== undefined && row[headerMap.revealedInfo] ? String(row[headerMap.revealedInfo]).trim() : '';
       const source = headerMap.source !== undefined && row[headerMap.source] ? String(row[headerMap.source]).trim() : '';
@@ -819,7 +868,7 @@
       title: elements.inputSceneTitle.value.trim() || 'ללא כותרת',
       pov: elements.inputScenePov.value.trim(),
       location: elements.inputSceneLocation.value.trim(),
-      time: elements.inputSceneTime.value.trim(),
+      time: formatTimelineValue(elements.inputSceneTime.value),
       summary: elements.inputSceneSummary.value.trim(),
       revealedInfo: elements.inputSceneRevealed.value.trim(),
       source: elements.inputSceneSource.value.trim()
