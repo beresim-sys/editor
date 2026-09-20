@@ -7,8 +7,39 @@
 (function () {
   'use strict';
 
-  // --- Storage Key ---
-  const STORAGE_KEY = 'book_scenes_editor_excel_v3';
+  // --- Storage Key (bumped to v6 to guarantee pure scene_1..scene_124 IDs) ---
+  const STORAGE_KEY = 'book_scenes_editor_v6';
+
+  /**
+   * Guarantees every scene has a strictly unique, valid ID and cleaned fields
+   */
+  function sanitizeScenes(scenes) {
+    if (!Array.isArray(scenes)) return [];
+    const seenIds = new Set();
+    return scenes.map((scene, idx) => {
+      let id = (scene.id !== undefined && scene.id !== null) ? String(scene.id).trim() : '';
+      // If ID is missing, contains Hebrew, spaces, slashes, or is duplicate:
+      if (!id || /[\u0590-\u05FF\s\/]/.test(id) || seenIds.has(id)) {
+        id = `scene_${idx + 1}`;
+        let counter = 1;
+        while (seenIds.has(id)) {
+          id = `scene_${idx + 1}_${counter++}`;
+        }
+      }
+      seenIds.add(id);
+
+      return {
+        id,
+        title: (scene.title && typeof scene.title === 'string') ? scene.title.trim() : `סצנה ${idx + 1}`,
+        pov: (scene.pov && typeof scene.pov === 'string') ? scene.pov.trim() : '',
+        location: (scene.location && typeof scene.location === 'string') ? scene.location.trim() : '',
+        time: (scene.time && typeof scene.time === 'string') ? scene.time.trim() : '',
+        summary: (scene.summary && typeof scene.summary === 'string') ? scene.summary.trim() : '',
+        revealedInfo: (scene.revealedInfo && typeof scene.revealedInfo === 'string') ? scene.revealedInfo.trim() : '',
+        source: (scene.source && typeof scene.source === 'string') ? scene.source.trim() : ''
+      };
+    });
+  }
 
   // Top characters for quick POV filter pills
   const PRIMARY_CHARACTERS = [
@@ -104,22 +135,42 @@
   }
 
   async function loadInitialData() {
-    // 1. Check if user already has an in-progress reordered state in localStorage
+    // 1. Try to load from active v6 storage if healthy
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        state.scenes = JSON.parse(saved);
-        if (state.scenes && state.scenes.length > 0) {
-          state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
-          renderApp();
-          return;
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const ids = parsed.map(s => s.id);
+          const hasDuplicates = new Set(ids).size !== ids.length;
+          const hasInvalidIds = parsed.some(s => !s.id || /[\u0590-\u05FF\s\/]/.test(s.id));
+          
+          if (!hasDuplicates && !hasInvalidIds) {
+            state.scenes = sanitizeScenes(parsed);
+            state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+            renderApp();
+            return;
+          }
+          console.warn('Cached data had duplicate or invalid IDs; clearing corrupt cache and loading clean Excel file.');
         }
       } catch (e) {
-        console.error('Error reading localStorage:', e);
+        console.error('Error reading localStorage v6:', e);
       }
     }
 
-    // 2. Load directly from the project's Excel file
+    // Clean up all legacy corrupted keys
+    try {
+      [
+        'book_scenes_editor_v6',
+        'book_scenes_editor_v5',
+        'book_scenes_editor_excel_v4',
+        'book_scenes_editor_excel_v3',
+        'book_scenes_editor_file_v2',
+        'book_scenes_editor_data_v1'
+      ].forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+
+    // 2. Load directly from the project's Excel file ('סצנות לספר.xlsx')
     await loadScenesFromProjectExcelFile(false);
   }
 
@@ -171,8 +222,8 @@
 
     // Strategy C: Fallback to DEFAULT_SCENES
     if (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) {
-      state.scenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
-      state.originalScenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
+      state.scenes = sanitizeScenes(JSON.parse(JSON.stringify(DEFAULT_SCENES)));
+      state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
       saveData();
       renderApp();
       if (elements.dataSourceBadge) {
@@ -239,8 +290,8 @@
       const row = jsonRows[i];
       if (!row || row.length === 0) continue;
 
-      const id = headerMap.id !== undefined && row[headerMap.id] ? String(row[headerMap.id]).trim() : `scene_${i}`;
-      const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : `סצנה ${i}`;
+      const rawId = headerMap.id !== undefined && row[headerMap.id] ? String(row[headerMap.id]).trim() : '';
+      const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : '';
       const pov = headerMap.pov !== undefined && row[headerMap.pov] ? String(row[headerMap.pov]).trim() : '';
       const location = headerMap.location !== undefined && row[headerMap.location] ? String(row[headerMap.location]).trim() : '';
       const time = headerMap.time !== undefined && row[headerMap.time] ? String(row[headerMap.time]).trim() : '';
@@ -248,14 +299,25 @@
       const revealedInfo = headerMap.revealedInfo !== undefined && row[headerMap.revealedInfo] ? String(row[headerMap.revealedInfo]).trim() : '';
       const source = headerMap.source !== undefined && row[headerMap.source] ? String(row[headerMap.source]).trim() : '';
 
-      if (id || title || summary) {
-        parsedScenes.push({ id, title, pov, location, time, summary, revealedInfo, source });
-      }
+      // Skip row if it has no content at all (prevents trailing empty rows from Excel)
+      if (!title && !summary && !pov && !location && !rawId) continue;
+
+      const id = rawId || `scene_${parsedScenes.length + 1}`;
+      parsedScenes.push({
+        id,
+        title: title || `סצנה ${parsedScenes.length + 1}`,
+        pov,
+        location,
+        time,
+        summary,
+        revealedInfo,
+        source
+      });
     }
 
     if (parsedScenes.length > 0) {
-      state.scenes = parsedScenes;
-      state.originalScenes = JSON.parse(JSON.stringify(parsedScenes));
+      state.scenes = sanitizeScenes(parsedScenes);
+      state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
       saveData();
       renderApp();
       return true;
@@ -345,7 +407,7 @@
     const fragment = document.createDocumentFragment();
 
     filteredScenes.forEach((scene) => {
-      const globalIndex = state.scenes.findIndex(s => s.id === scene.id) + 1;
+      const globalIndex = state.scenes.indexOf(scene) + 1;
       const card = createSceneCardElement(scene, globalIndex);
       fragment.appendChild(card);
     });
@@ -744,8 +806,16 @@
   function handleSceneFormSubmit(e) {
     e.preventDefault();
 
+    let assignedId = elements.inputSceneId.value.trim();
+    if (!assignedId) {
+      assignedId = `scene_${state.scenes.length + 1}`;
+    }
+    if (!state.editingSceneId && state.scenes.some(s => s.id === assignedId)) {
+      assignedId = `scene_${state.scenes.length + 1}_${Date.now().toString().slice(-4)}`;
+    }
+
     const sceneData = {
-      id: elements.inputSceneId.value.trim() || `scene_${Date.now().toString().slice(-4)}`,
+      id: assignedId,
       title: elements.inputSceneTitle.value.trim() || 'ללא כותרת',
       pov: elements.inputScenePov.value.trim(),
       location: elements.inputSceneLocation.value.trim(),
@@ -991,6 +1061,20 @@
 
     // Top action triggers: Reload directly from Excel file in project folder
     elements.btnReloadFromExcel.addEventListener('click', () => {
+      try {
+        [
+          'book_scenes_editor_v6',
+          'book_scenes_editor_v5',
+          'book_scenes_editor_excel_v4',
+          'book_scenes_editor_excel_v3',
+          'book_scenes_editor_file_v2',
+          'book_scenes_editor_data_v1'
+        ].forEach(k => {
+          localStorage.removeItem(k);
+        });
+      } catch (e) {
+        console.error('Error clearing localStorage:', e);
+      }
       loadScenesFromProjectExcelFile(true);
     });
 
