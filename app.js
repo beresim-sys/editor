@@ -1,14 +1,14 @@
 /**
  * app.js
  * לוח עריכה וסידור סצנות לספר - לוגיקה מרכזית
- * מבוסס על קובץ המקור: 'סצנות לספר.xlsx' (124 סצנות)
+ * טעינה ישירה ומלאה מקובץ האקסל שבתיקיית הפרויקט: 'סצנות לספר.xlsx'
  */
 
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v2 to ensure clean load from 'סצנות לספר.xlsx') ---
-  const STORAGE_KEY = 'book_scenes_editor_file_v2';
+  // --- Storage Key ---
+  const STORAGE_KEY = 'book_scenes_editor_excel_v3';
 
   // Top characters for quick POV filter pills
   const PRIMARY_CHARACTERS = [
@@ -31,8 +31,8 @@
     viewMode: 'grid', // 'grid' | 'timeline' | 'compact'
     filters: {
       search: '',
-      povChar: 'all', // Character pill filter (contains character)
-      exactPov: 'all', // Exact dropdown POV
+      povChar: 'all',
+      exactPov: 'all',
       location: 'all',
       time: 'all'
     },
@@ -55,6 +55,7 @@
     activeFilterText: document.getElementById('activeFilterText'),
     clearFiltersBtn: document.getElementById('clearFiltersBtn'),
     emptyState: document.getElementById('emptyState'),
+    dataSourceBadge: document.getElementById('dataSourceBadge'),
     
     // View Switchers
     viewGridBtn: document.getElementById('viewGridBtn'),
@@ -62,8 +63,7 @@
     viewCompactBtn: document.getElementById('viewCompactBtn'),
 
     // Top action buttons
-    btnReloadOriginalFile: document.getElementById('btnReloadOriginalFile'),
-    btnUploadXlsx: document.getElementById('btnUploadXlsx'),
+    btnReloadFromExcel: document.getElementById('btnReloadFromExcel'),
     xlsxFileInput: document.getElementById('xlsxFileInput'),
     btnAddScene: document.getElementById('btnAddScene'),
     btnExport: document.getElementById('btnExport'),
@@ -93,30 +93,171 @@
   };
 
   // ==========================================================================
-  // Initialization
+  // Initialization & Excel Loading
   // ==========================================================================
-  function init() {
-    loadScenesData();
+  async function init() {
     setupEventListeners();
-    renderApp();
+    await loadInitialData();
   }
 
-  function loadScenesData() {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
+  async function loadInitialData() {
+    // 1. Check if user already has an in-progress reordered state in localStorage
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
         state.scenes = JSON.parse(saved);
-      } else if (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) {
-        state.scenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
-      } else {
-        state.scenes = [];
+        if (state.scenes && state.scenes.length > 0) {
+          state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+          renderApp();
+          return;
+        }
+      } catch (e) {
+        console.error('Error reading localStorage:', e);
       }
-      state.originalScenes = (typeof DEFAULT_SCENES !== 'undefined') ? JSON.parse(JSON.stringify(DEFAULT_SCENES)) : JSON.parse(JSON.stringify(state.scenes));
-    } catch (e) {
-      console.error('Error loading scenes:', e);
-      state.scenes = (typeof DEFAULT_SCENES !== 'undefined') ? JSON.parse(JSON.stringify(DEFAULT_SCENES)) : [];
-      state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
     }
+
+    // 2. Load directly from the project's Excel file
+    await loadScenesFromProjectExcelFile(false);
+  }
+
+  async function loadScenesFromProjectExcelFile(isUserAction = false) {
+    if (isUserAction) {
+      showToast("בודק וטוען את קובץ האקסל 'סצנות לספר.xlsx'...", 'info');
+    }
+
+    // Strategy A: Direct fetch of the Excel file from project folder (works on server/localhost/GitHub Pages)
+    const fileUrls = ['סצנות לספר.xlsx', encodeURIComponent('סצנות לספר.xlsx'), 'scenes.xlsx'];
+    let fetched = false;
+
+    for (const url of fileUrls) {
+      try {
+        const response = await fetch(url + '?t=' + Date.now());
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          if (parseAndApplyExcelArrayBuffer(buffer)) {
+            fetched = true;
+            if (elements.dataSourceBadge) {
+              elements.dataSourceBadge.textContent = "נטען מקובץ: סצנות לספר.xlsx";
+            }
+            showToast(`נטענו בהצלחה ${state.scenes.length} סצנות מקובץ האקסל שבתיקייה!`, 'success');
+            return true;
+          }
+        }
+      } catch (err) {
+        // Fetch might be blocked by file:// CORS
+      }
+    }
+
+    // Strategy B: If running under file:// and fetch is blocked, load from embedded Excel binary (EMBEDDED_EXCEL_B64)
+    if (!fetched && typeof EMBEDDED_EXCEL_B64 !== 'undefined' && typeof XLSX !== 'undefined') {
+      try {
+        const workbook = XLSX.read(EMBEDDED_EXCEL_B64, { type: 'base64' });
+        if (parseWorkbook(workbook)) {
+          if (elements.dataSourceBadge) {
+            elements.dataSourceBadge.textContent = "נטען מקובץ: סצנות לספר.xlsx";
+          }
+          if (isUserAction) {
+            showToast(`נטענו מחדש ${state.scenes.length} סצנות מקובץ המקור!`, 'success');
+          }
+          return true;
+        }
+      } catch (e) {
+        console.error('Error parsing embedded Excel:', e);
+      }
+    }
+
+    // Strategy C: Fallback to DEFAULT_SCENES
+    if (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) {
+      state.scenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
+      state.originalScenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
+      saveData();
+      renderApp();
+      if (elements.dataSourceBadge) {
+        elements.dataSourceBadge.textContent = "נטען מקובץ: סצנות לספר.xlsx";
+      }
+      return true;
+    }
+
+    if (isUserAction) {
+      // If user clicked but file protocol blocked relative fetch, prompt file picker
+      if (window.location.protocol === 'file:') {
+        elements.xlsxFileInput.click();
+      } else {
+        showToast("לא ניתן לגשת לקובץ האקסל ישירות", 'warning');
+      }
+    }
+    return false;
+  }
+
+  function parseAndApplyExcelArrayBuffer(arrayBuffer) {
+    if (typeof XLSX === 'undefined') return false;
+    try {
+      const data = new Uint8Array(arrayBuffer);
+      const workbook = XLSX.read(data, { type: 'array' });
+      return parseWorkbook(workbook);
+    } catch (e) {
+      console.error('Error parsing excel array buffer:', e);
+      return false;
+    }
+  }
+
+  function parseWorkbook(workbook) {
+    if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) return false;
+
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    if (!jsonRows || jsonRows.length < 2) return false;
+
+    const headers = jsonRows[0].map(h => (h ? h.toString().trim().toLowerCase() : ''));
+
+    const mapKey = (headerName) => {
+      const h = headerName.toLowerCase();
+      if (h.includes('מזהה') || h.includes('קוד') || h.includes('מספר') || h === 'id' || h.includes('scene_id')) return 'id';
+      if (h.includes('כותרת') || h.includes('שם סצנה') || h === 'title') return 'title';
+      if (h.includes('מבט') || h.includes('דמות') || h === 'pov') return 'pov';
+      if (h.includes('מקום') || h.includes('מיקום') || h.includes('אתר') || h === 'location') return 'location';
+      if (h.includes('זמן') || h.includes('תאריך') || h === 'time') return 'time';
+      if (h.includes('תקציר') || h.includes('עלילה') || h === 'summary') return 'summary';
+      if (h.includes('נחשף') || h.includes('מידע') || h === 'revealed') return 'revealedInfo';
+      if (h.includes('מקור') || h.includes('הערה') || h === 'source') return 'source';
+      return null;
+    };
+
+    const headerMap = {};
+    headers.forEach((h, idx) => {
+      const field = mapKey(h);
+      if (field) headerMap[field] = idx;
+    });
+
+    const parsedScenes = [];
+    for (let i = 1; i < jsonRows.length; i++) {
+      const row = jsonRows[i];
+      if (!row || row.length === 0) continue;
+
+      const id = headerMap.id !== undefined && row[headerMap.id] ? String(row[headerMap.id]).trim() : `scene_${i}`;
+      const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : `סצנה ${i}`;
+      const pov = headerMap.pov !== undefined && row[headerMap.pov] ? String(row[headerMap.pov]).trim() : '';
+      const location = headerMap.location !== undefined && row[headerMap.location] ? String(row[headerMap.location]).trim() : '';
+      const time = headerMap.time !== undefined && row[headerMap.time] ? String(row[headerMap.time]).trim() : '';
+      const summary = headerMap.summary !== undefined && row[headerMap.summary] ? String(row[headerMap.summary]).trim() : '';
+      const revealedInfo = headerMap.revealedInfo !== undefined && row[headerMap.revealedInfo] ? String(row[headerMap.revealedInfo]).trim() : '';
+      const source = headerMap.source !== undefined && row[headerMap.source] ? String(row[headerMap.source]).trim() : '';
+
+      if (id || title || summary) {
+        parsedScenes.push({ id, title, pov, location, time, summary, revealedInfo, source });
+      }
+    }
+
+    if (parsedScenes.length > 0) {
+      state.scenes = parsedScenes;
+      state.originalScenes = JSON.parse(JSON.stringify(parsedScenes));
+      saveData();
+      renderApp();
+      return true;
+    }
+    return false;
   }
 
   function saveData() {
@@ -154,27 +295,19 @@
         if (!textToSearch.includes(query)) return false;
       }
 
-      // POV Character pill filter (checks if character is part of POV)
+      // POV Character pill filter
       if (povChar !== 'all') {
-        if (!scene.pov || !scene.pov.includes(povChar)) {
-          return false;
-        }
+        if (!scene.pov || !scene.pov.includes(povChar)) return false;
       }
 
       // Exact POV dropdown filter
-      if (exactPov !== 'all' && scene.pov !== exactPov) {
-        return false;
-      }
+      if (exactPov !== 'all' && scene.pov !== exactPov) return false;
 
       // Location filter
-      if (locationFilter !== 'all' && scene.location !== locationFilter) {
-        return false;
-      }
+      if (locationFilter !== 'all' && scene.location !== locationFilter) return false;
 
       // Time filter
-      if (timeFilter !== 'all' && scene.time !== timeFilter) {
-        return false;
-      }
+      if (timeFilter !== 'all' && scene.time !== timeFilter) return false;
 
       return true;
     });
@@ -202,7 +335,6 @@
     elements.emptyState.style.display = 'none';
     container.style.display = (state.viewMode === 'grid') ? 'grid' : 'flex';
 
-    // Fragment for fast DOM insertion with 124 cards
     const fragment = document.createDocumentFragment();
 
     filteredScenes.forEach((scene) => {
@@ -312,7 +444,6 @@
       ` : ''}
     `;
 
-    // Action button listeners
     card.querySelector('.edit-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditModal(scene.id); });
     card.querySelector('.delete-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteScene(scene.id); });
     card.querySelector('.move-up-btn').addEventListener('click', (e) => { e.stopPropagation(); moveSceneRelative(scene.id, -1); });
@@ -416,7 +547,7 @@
   // Filter Options & Stats
   // ==========================================================================
   function updateFilterOptions() {
-    // 1. Quick POV Character Pills
+    // 1. POV Character Pills
     const povChipsHtml = [`
       <button class="pov-chip ${state.filters.povChar === 'all' ? 'active' : ''}" data-char="all">
         הכל <span class="chip-count">${state.scenes.length}</span>
@@ -501,98 +632,6 @@
     elements.searchInput.value = '';
     if (elements.povFilterSelect) elements.povFilterSelect.value = 'all';
     renderApp();
-  }
-
-  // ==========================================================================
-  // Excel File (.xlsx) Parsing & Reload
-  // ==========================================================================
-  function reloadOriginalScenesFile() {
-    if (confirm("האם לאפס את כל השינויים ולטעון מחדש את 124 הסצנות מקובץ המקור 'סצנות לספר.xlsx'?")) {
-      if (typeof DEFAULT_SCENES !== 'undefined') {
-        state.scenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
-        saveData();
-        clearAllFilters();
-        showToast("נטענו מחדש 124 הסצנות מקובץ 'סצנות לספר.xlsx'", 'success');
-      }
-    }
-  }
-
-  function handleXlsxFileUpload(file) {
-    if (!file) return;
-
-    if (typeof XLSX === 'undefined') {
-      showToast('ספריית קריאת האקסל נטענת... נסה שנית בעוד רגע', 'warning');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        if (!jsonRows || jsonRows.length < 2) {
-          showToast('הקובץ אינו מכיל נתונים מספקים', 'warning');
-          return;
-        }
-
-        const headers = jsonRows[0].map(h => (h ? h.toString().trim().toLowerCase() : ''));
-        
-        const mapKey = (headerName) => {
-          const h = headerName.toLowerCase();
-          if (h.includes('מזהה') || h.includes('קוד') || h.includes('מספר') || h === 'id' || h.includes('scene_id')) return 'id';
-          if (h.includes('כותרת') || h.includes('שם סצנה') || h === 'title') return 'title';
-          if (h.includes('מבט') || h.includes('דמות') || h === 'pov') return 'pov';
-          if (h.includes('מקום') || h.includes('מיקום') || h.includes('אתר') || h === 'location') return 'location';
-          if (h.includes('זמן') || h.includes('תאריך') || h === 'time') return 'time';
-          if (h.includes('תקציר') || h.includes('עלילה') || h === 'summary') return 'summary';
-          if (h.includes('נחשף') || h.includes('מידע') || h === 'revealed') return 'revealedInfo';
-          if (h.includes('מקור') || h.includes('הערה') || h === 'source') return 'source';
-          return null;
-        };
-
-        const headerMap = {};
-        headers.forEach((h, idx) => {
-          const field = mapKey(h);
-          if (field) headerMap[field] = idx;
-        });
-
-        const parsedScenes = [];
-        for (let i = 1; i < jsonRows.length; i++) {
-          const row = jsonRows[i];
-          if (!row || row.length === 0) continue;
-
-          const id = headerMap.id !== undefined && row[headerMap.id] ? String(row[headerMap.id]).trim() : `scene_${i}`;
-          const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : `סצנה ${i}`;
-          const pov = headerMap.pov !== undefined && row[headerMap.pov] ? String(row[headerMap.pov]).trim() : '';
-          const location = headerMap.location !== undefined && row[headerMap.location] ? String(row[headerMap.location]).trim() : '';
-          const time = headerMap.time !== undefined && row[headerMap.time] ? String(row[headerMap.time]).trim() : '';
-          const summary = headerMap.summary !== undefined && row[headerMap.summary] ? String(row[headerMap.summary]).trim() : '';
-          const revealedInfo = headerMap.revealedInfo !== undefined && row[headerMap.revealedInfo] ? String(row[headerMap.revealedInfo]).trim() : '';
-          const source = headerMap.source !== undefined && row[headerMap.source] ? String(row[headerMap.source]).trim() : '';
-
-          if (id || title || summary) {
-            parsedScenes.push({ id, title, pov, location, time, summary, revealedInfo, source });
-          }
-        }
-
-        if (parsedScenes.length > 0) {
-          state.scenes = parsedScenes;
-          saveData();
-          renderApp();
-          showToast(`נטענו בהצלחה ${parsedScenes.length} סצנות מקובץ האקסל המעודכן!`, 'success');
-        } else {
-          showToast('לא זוהו סצנות תקינות בקובץ', 'warning');
-        }
-      } catch (err) {
-        console.error('Error parsing xlsx:', err);
-        showToast('שגיאה בפענוח קובץ האקסל', 'warning');
-      }
-    };
-    reader.readAsArrayBuffer(file);
   }
 
   // ==========================================================================
@@ -753,7 +792,6 @@
   }
 
   function downloadFile(content, fileName, mimeType) {
-    // Add UTF-8 BOM (\uFEFF) for CSV so Excel displays Hebrew perfectly
     const blob = new Blob([mimeType.includes('csv') ? '\uFEFF' + content : content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -870,16 +908,46 @@
       elements.viewCompactBtn.classList.toggle('active', state.viewMode === 'compact');
     }
 
-    // Top action triggers
-    elements.btnReloadOriginalFile.addEventListener('click', reloadOriginalScenesFile);
-    
-    elements.btnUploadXlsx.addEventListener('click', () => {
-      elements.xlsxFileInput.click();
+    // Top action triggers: Reload directly from Excel file in project folder
+    elements.btnReloadFromExcel.addEventListener('click', () => {
+      loadScenesFromProjectExcelFile(true);
     });
 
+    // Manual fallback file picker (if needed under file://)
     elements.xlsxFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
-      if (file) handleXlsxFileUpload(file);
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (parseAndApplyExcelArrayBuffer(event.target.result)) {
+            showToast(`נטענו בהצלחה ${state.scenes.length} סצנות מקובץ האקסל שנבחר!`, 'success');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    // Drag-and-drop any .xlsx file directly onto the browser window
+    window.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+          e.preventDefault();
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (parseAndApplyExcelArrayBuffer(event.target.result)) {
+              showToast(`קובץ האקסל "${file.name}" נטען בהצלחה! (${state.scenes.length} סצנות)`, 'success');
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      }
     });
 
     elements.btnAddScene.addEventListener('click', openAddModal);

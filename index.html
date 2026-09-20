@@ -28,28 +28,21 @@
           <div class="brand-titles">
             <h1>
               <span>לוח עריכת סצנות לספר</span>
-              <span class="source-pill">סצנות לספר.xlsx</span>
+              <span class="source-pill" id="dataSourceBadge">נטען מקובץ: סצנות לספר.xlsx</span>
             </h1>
             <span class="tagline">סידור עלילתי, מעקב נקודות מבט (POV), מקום, זמן וחשיפת מידע</span>
           </div>
         </div>
 
         <div class="header-actions">
-          <!-- Hidden file input for updated XLSX -->
-          <input type="file" id="xlsxFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+          <!-- Hidden file input for manual XLSX selection if needed -->
+          <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" style="display: none;">
 
-          <button class="btn btn-secondary" id="btnUploadXlsx" title="העלה גרסה מעודכנת של קובץ 'סצנות לספר.xlsx'">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-            </svg>
-            <span>עדכון מקובץ אקסל</span>
-          </button>
-
-          <button class="btn btn-secondary" id="btnReloadOriginalFile" title="שחזר את 124 הסצנות המקוריות מקובץ 'סצנות לספר.xlsx'">
+          <button class="btn btn-primary" id="btnReloadFromExcel" title="קרא מחדש את קובץ 'סצנות לספר.xlsx' מתיקיית הפרויקט">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
-            <span>איפוס לסדר המקור</span>
+            <span>טעינה מחדש מקובץ האקסל</span>
           </button>
 
           <button class="btn btn-secondary" id="btnExport" title="ייצוא הסדר החדש או העתקה ללוח">
@@ -59,7 +52,7 @@
             <span>ייצוא הסדר החדש</span>
           </button>
 
-          <button class="btn btn-primary" id="btnAddScene" title="הוסף סצנה חדשה ללוח">
+          <button class="btn btn-secondary" id="btnAddScene" title="הוסף סצנה חדשה ללוח">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
@@ -125,7 +118,7 @@
     <!-- Quick Status / Info Bar -->
     <div class="status-bar">
       <div class="stats-left">
-        <span class="stat-pill">סה"כ סצנות בספר: <strong id="totalScenesCount">124</strong></span>
+        <span class="stat-pill">סה"כ סצנות: <strong id="totalScenesCount">124</strong></span>
         <span id="filteredCountDisplay" style="color: var(--primary); font-weight: 700;"></span>
         <span class="active-filter-badge" id="activeFilterBadge" style="display: none;">
           <span id="activeFilterText"></span>
@@ -133,7 +126,7 @@
         </span>
       </div>
       <div>
-        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות כדי לשנות את סדר הסצנות • השינויים נשמרים אוטומטית</span>
+        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות כדי לסדר מחדש את הרצף • השינויים נשמרים אוטומטית</span>
       </div>
     </div>
 
@@ -267,9 +260,10 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Libraries & Scripts -->
-  <!-- SheetJS for client-side Excel XLSX reading if updating file in browser -->
+  <!-- Libraries & Data -->
+  <!-- SheetJS for local Excel parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="excel-data.js"></script>
   <script src="scenes-data.js"></script>
   <script src="app.js"></script>
 </body>
