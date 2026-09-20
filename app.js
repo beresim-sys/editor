@@ -34,7 +34,8 @@
       povChar: 'all',
       exactPov: 'all',
       location: 'all',
-      time: 'all'
+      time: 'all',
+      source: 'all'
     },
     draggedId: null,
     editingSceneId: null
@@ -49,6 +50,8 @@
     searchClearBtn: document.getElementById('searchClearBtn'),
     povChipsContainer: document.getElementById('povChipsContainer'),
     povFilterSelect: document.getElementById('povFilterSelect'),
+    sourceChipsContainer: document.getElementById('sourceChipsContainer'),
+    sourceFilterSelect: document.getElementById('sourceFilterSelect'),
     locationFilterSelect: document.getElementById('locationFilterSelect'),
     timeFilterSelect: document.getElementById('timeFilterSelect'),
     activeFilterBadge: document.getElementById('activeFilterBadge'),
@@ -277,6 +280,7 @@
     const exactPov = state.filters.exactPov;
     const locationFilter = state.filters.location;
     const timeFilter = state.filters.time;
+    const sourceFilter = state.filters.source;
 
     return state.scenes.filter((scene) => {
       // Free text search
@@ -302,6 +306,9 @@
 
       // Exact POV dropdown filter
       if (exactPov !== 'all' && scene.pov !== exactPov) return false;
+
+      // Source filter
+      if (sourceFilter !== 'all' && scene.source !== sourceFilter) return false;
 
       // Location filter
       if (locationFilter !== 'all' && scene.location !== locationFilter) return false;
@@ -437,12 +444,21 @@
       ` : ''}
 
       ${scene.source ? `
-        <div class="scene-source-footer" title="מקור">
+        <div class="scene-source-footer clickable-source-tag" title="לחץ כדי לסנן סצנות מתוך מקור זה" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-          <span>מקור: ${escapeHtml(scene.source)}</span>
+          <span>מקור: <strong>${escapeHtml(scene.source)}</strong></span>
         </div>
       ` : ''}
     `;
+
+    const sourceTag = card.querySelector('.clickable-source-tag');
+    if (sourceTag) {
+      sourceTag.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.filters.source = scene.source;
+        renderApp();
+      });
+    }
 
     card.querySelector('.edit-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditModal(scene.id); });
     card.querySelector('.delete-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteScene(scene.id); });
@@ -581,13 +597,52 @@
         allPovs.map(p => `<option value="${escapeHtml(p)}" ${p === currentExact ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
     }
 
-    // 3. Location Dropdown
+    // 3. Source Filter Buttons & Dropdown
+    const sourceCounts = {};
+    state.scenes.forEach(s => {
+      const src = s.source ? s.source.trim() : 'ללא מקור';
+      sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+    });
+
+    const uniqueSources = Object.keys(sourceCounts).sort();
+
+    if (elements.sourceChipsContainer) {
+      const sourceChipsHtml = [`
+        <button class="source-chip ${state.filters.source === 'all' ? 'active' : ''}" data-source="all">
+          כל המקורות <span class="chip-count">${state.scenes.length}</span>
+        </button>
+      `];
+
+      uniqueSources.forEach(src => {
+        sourceChipsHtml.push(`
+          <button class="source-chip ${state.filters.source === src ? 'active' : ''}" data-source="${escapeHtml(src)}">
+            ${escapeHtml(src)} <span class="chip-count">${sourceCounts[src]}</span>
+          </button>
+        `);
+      });
+
+      elements.sourceChipsContainer.innerHTML = sourceChipsHtml.join('');
+      elements.sourceChipsContainer.querySelectorAll('.source-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.filters.source = btn.dataset.source;
+          renderApp();
+        });
+      });
+    }
+
+    if (elements.sourceFilterSelect) {
+      const currentSrc = state.filters.source;
+      elements.sourceFilterSelect.innerHTML = '<option value="all">כל המקורות</option>' +
+        uniqueSources.map(src => `<option value="${escapeHtml(src)}" ${src === currentSrc ? 'selected' : ''}>${escapeHtml(src)} (${sourceCounts[src]})</option>`).join('');
+    }
+
+    // 4. Location Dropdown
     const currentLoc = state.filters.location;
     const locations = Array.from(new Set(state.scenes.map(s => s.location).filter(Boolean))).sort();
     elements.locationFilterSelect.innerHTML = '<option value="all">כל המיקומים</option>' +
       locations.map(loc => `<option value="${escapeHtml(loc)}" ${loc === currentLoc ? 'selected' : ''}>${escapeHtml(loc)}</option>`).join('');
 
-    // 4. Time Dropdown
+    // 5. Time Dropdown
     const currentTime = state.filters.time;
     const times = Array.from(new Set(state.scenes.map(s => s.time).filter(Boolean))).sort();
     elements.timeFilterSelect.innerHTML = '<option value="all">כל הזמנים העלילתיים</option>' +
@@ -601,7 +656,8 @@
     elements.totalScenesCount.textContent = total;
     
     const isFiltered = state.filters.search || state.filters.povChar !== 'all' || 
-                       state.filters.exactPov !== 'all' || state.filters.location !== 'all' || state.filters.time !== 'all';
+                       state.filters.exactPov !== 'all' || state.filters.source !== 'all' ||
+                       state.filters.location !== 'all' || state.filters.time !== 'all';
 
     if (isFiltered) {
       elements.filteredCountDisplay.textContent = `(מוצגות ${filtered})`;
@@ -609,6 +665,7 @@
       
       let filterDesc = [];
       if (state.filters.search) filterDesc.push(`חיפוש: "${state.filters.search}"`);
+      if (state.filters.source !== 'all') filterDesc.push(`מקור: ${state.filters.source}`);
       if (state.filters.povChar !== 'all') filterDesc.push(`דמות: ${state.filters.povChar}`);
       if (state.filters.exactPov !== 'all') filterDesc.push(`POV: ${state.filters.exactPov}`);
       if (state.filters.location !== 'all') filterDesc.push(`מיקום: ${state.filters.location}`);
@@ -627,10 +684,12 @@
     state.filters.search = '';
     state.filters.povChar = 'all';
     state.filters.exactPov = 'all';
+    state.filters.source = 'all';
     state.filters.location = 'all';
     state.filters.time = 'all';
     elements.searchInput.value = '';
     if (elements.povFilterSelect) elements.povFilterSelect.value = 'all';
+    if (elements.sourceFilterSelect) elements.sourceFilterSelect.value = 'all';
     renderApp();
   }
 
@@ -867,6 +926,13 @@
     if (elements.povFilterSelect) {
       elements.povFilterSelect.addEventListener('change', (e) => {
         state.filters.exactPov = e.target.value;
+        renderApp();
+      });
+    }
+
+    if (elements.sourceFilterSelect) {
+      elements.sourceFilterSelect.addEventListener('change', (e) => {
+        state.filters.source = e.target.value;
         renderApp();
       });
     }
