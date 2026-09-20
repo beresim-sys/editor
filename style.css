@@ -1,5 +1,6 @@
 /* ==========================================================================
    לוח עריכה וסידור סצנות לספר - Design System (RTL)
+   מבוסס על קובץ 'סצנות לספר.xlsx'
    ========================================================================== */
 
 :root {
@@ -36,7 +37,6 @@
   --shadow-drag: 0 20px 35px -5px rgba(67, 56, 202, 0.25), 0 0 0 2px var(--primary);
 
   --font-sans: 'Assistant', 'Heebo', system-ui, -apple-system, sans-serif;
-  --font-serif: 'Frank Ruhl Libre', 'David Libre', serif;
   
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
@@ -78,7 +78,7 @@ body {
 }
 
 .header-inner {
-  max-width: 1540px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0.85rem 1.5rem;
   display: flex;
@@ -114,6 +114,16 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.brand-titles .source-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
 }
 
 .brand-titles .tagline {
@@ -187,11 +197,6 @@ body {
   color: var(--text-main);
 }
 
-.btn-icon-only {
-  padding: 0.55rem;
-  border-radius: var(--radius-sm);
-}
-
 .btn svg {
   width: 17px;
   height: 17px;
@@ -207,7 +212,7 @@ body {
 }
 
 .toolbar-inner {
-  max-width: 1540px;
+  max-width: 1600px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -219,9 +224,9 @@ body {
 /* Search Box */
 .search-wrapper {
   position: relative;
-  min-width: 260px;
+  min-width: 280px;
   flex-grow: 1;
-  max-width: 360px;
+  max-width: 380px;
 }
 
 .search-input {
@@ -265,6 +270,8 @@ body {
   cursor: pointer;
   padding: 2px;
   display: none;
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .search-clear-btn:hover {
@@ -277,6 +284,7 @@ body {
   align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
+  flex: 2;
 }
 
 .filter-select {
@@ -289,6 +297,7 @@ body {
   color: var(--text-main);
   cursor: pointer;
   transition: border-color var(--transition-fast);
+  max-width: 200px;
 }
 
 .filter-select:focus {
@@ -302,16 +311,18 @@ body {
   align-items: center;
   gap: 0.35rem;
   overflow-x: auto;
+  max-width: 550px;
   padding-bottom: 2px;
+  scrollbar-width: thin;
 }
 
 .pov-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.32rem 0.65rem;
   border-radius: var(--radius-full);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   border: 1px solid var(--border-light);
   background: #ffffff;
@@ -337,7 +348,7 @@ body {
   background: rgba(0, 0, 0, 0.06);
   padding: 1px 6px;
   border-radius: var(--radius-full);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 
 .pov-chip.active .chip-count {
@@ -383,7 +394,7 @@ body {
 
 /* Stats / Status Bar */
 .status-bar {
-  max-width: 1540px;
+  max-width: 1600px;
   margin: 0.75rem auto 0;
   padding: 0 1.5rem;
   display: flex;
@@ -433,7 +444,7 @@ body {
 /* Content Area */
 .content-area {
   flex-grow: 1;
-  max-width: 1540px;
+  max-width: 1600px;
   width: 100%;
   margin: 0 auto;
   padding: 1.25rem 1.5rem 3rem;
@@ -446,7 +457,7 @@ body {
 /* Grid View */
 .scenes-container.grid-view {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 1.25rem;
   align-items: start;
 }
@@ -457,9 +468,9 @@ body {
   flex-direction: column;
   gap: 1.5rem;
   position: relative;
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
-  padding-right: 3rem;
+  padding-right: 3.5rem;
 }
 
 .scenes-container.timeline-view::before {
@@ -467,9 +478,9 @@ body {
   position: absolute;
   top: 1rem;
   bottom: 1rem;
-  right: 1.15rem;
+  right: 1.35rem;
   width: 3px;
-  background: linear-gradient(to bottom, #c7d2fe, #e2e8f0);
+  background: linear-gradient(to bottom, #818cf8, #e2e8f0);
   border-radius: var(--radius-full);
 }
 
@@ -477,7 +488,7 @@ body {
 .scenes-container.compact-view {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 /* Scene Card Common */
@@ -489,7 +500,7 @@ body {
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.85rem;
   position: relative;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   cursor: default;
@@ -576,7 +587,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  opacity: 0.7;
+  opacity: 0.6;
   transition: opacity var(--transition-fast);
 }
 
@@ -641,18 +652,22 @@ body {
   stroke-width: 2.2;
 }
 
-/* Dynamic POV styling */
+/* Dynamic POV color schemes */
 .pov-pill {
   border: 1px solid transparent;
 }
 
-.pov-שרה { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
-.pov-רפאל { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-.pov-סלווטור { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-.pov-מלכה { background: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
-.pov-סוזט { background: #fffbeb; color: #b45309; border-color: #fde68a; }
-.pov-מאיר { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
-.pov-ניסים { background: #fff7ed; color: #c2410c; border-color: #ffedd5; }
+/* Character Color Variants */
+.pov-shara { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.pov-raphael-shaul { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.pov-raphael-altras { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.pov-meir { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
+.pov-salvatore { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+.pov-sultana { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.pov-nissim { background: #fff7ed; color: #c2410c; border-color: #ffedd5; }
+.pov-malka { background: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
+.pov-louisa { background: #fdf4ff; color: #a21caf; border-color: #f5d0fe; }
+.pov-souzette { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
 .pov-generic { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
 
 .location-pill {
@@ -736,9 +751,9 @@ body {
 .scenes-container.timeline-view .timeline-node {
   position: absolute;
   top: 1.5rem;
-  right: -2.6rem;
-  width: 24px;
-  height: 24px;
+  right: -3rem;
+  width: 28px;
+  height: 28px;
   background: var(--primary);
   color: #ffffff;
   border: 3px solid #ffffff;
@@ -746,8 +761,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 800;
   box-shadow: 0 0 0 2px #c7d2fe;
 }
 
@@ -755,7 +770,7 @@ body {
 .scenes-container.compact-view .scene-card {
   flex-direction: row;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 1rem;
   gap: 1rem;
 }
 
@@ -765,8 +780,8 @@ body {
 }
 
 .scenes-container.compact-view .scene-title {
-  flex: 1 1 200px;
-  font-size: 0.96rem;
+  flex: 1 1 260px;
+  font-size: 0.94rem;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -819,9 +834,7 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ==========================================================================
-   Modals
-   ========================================================================== */
+/* Modals */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -880,6 +893,8 @@ body {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .modal-close-btn:hover {
@@ -947,7 +962,6 @@ body {
   gap: 1rem;
 }
 
-/* Helper Instructions inside Sheets Modal */
 .guide-box {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -955,22 +969,6 @@ body {
   padding: 1rem;
   font-size: 0.85rem;
   color: #334155;
-}
-
-.guide-box ol {
-  padding-right: 1.3rem;
-  margin-top: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.guide-box code {
-  background: #e2e8f0;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.8rem;
 }
 
 /* Toast Notifications */

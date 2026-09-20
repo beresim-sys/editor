@@ -1,15 +1,28 @@
 /**
  * app.js
  * לוח עריכה וסידור סצנות לספר - לוגיקה מרכזית
- * כולל: Drag & Drop, Google Sheets parser, סינון וחיפוש, ייצוא ואינטראקציות
+ * מבוסס על קובץ המקור: 'סצנות לספר.xlsx' (124 סצנות)
  */
 
 (function () {
   'use strict';
 
-  // --- Constants & Storage Keys ---
-  const STORAGE_KEY = 'book_scenes_editor_data_v1';
-  const STORAGE_SHEET_KEY = 'book_scenes_sheet_url_v1';
+  // --- Storage Key (bumped to v2 to ensure clean load from 'סצנות לספר.xlsx') ---
+  const STORAGE_KEY = 'book_scenes_editor_file_v2';
+
+  // Top characters for quick POV filter pills
+  const PRIMARY_CHARACTERS = [
+    'שרה',
+    'רפאל שאול',
+    'רפאל אלטרס',
+    'מאיר דסה',
+    'סלווטור',
+    'סולטנה',
+    'ניסים',
+    'מלכה',
+    'לואיזה',
+    'סוזט'
+  ];
 
   // --- Application State ---
   let state = {
@@ -18,11 +31,11 @@
     viewMode: 'grid', // 'grid' | 'timeline' | 'compact'
     filters: {
       search: '',
-      pov: 'all',
+      povChar: 'all', // Character pill filter (contains character)
+      exactPov: 'all', // Exact dropdown POV
       location: 'all',
       time: 'all'
     },
-    sheetUrl: '',
     draggedId: null,
     editingSceneId: null
   };
@@ -35,6 +48,7 @@
     searchInput: document.getElementById('searchInput'),
     searchClearBtn: document.getElementById('searchClearBtn'),
     povChipsContainer: document.getElementById('povChipsContainer'),
+    povFilterSelect: document.getElementById('povFilterSelect'),
     locationFilterSelect: document.getElementById('locationFilterSelect'),
     timeFilterSelect: document.getElementById('timeFilterSelect'),
     activeFilterBadge: document.getElementById('activeFilterBadge'),
@@ -48,18 +62,13 @@
     viewCompactBtn: document.getElementById('viewCompactBtn'),
 
     // Top action buttons
-    btnSyncSheets: document.getElementById('btnSyncSheets'),
+    btnReloadOriginalFile: document.getElementById('btnReloadOriginalFile'),
+    btnUploadXlsx: document.getElementById('btnUploadXlsx'),
+    xlsxFileInput: document.getElementById('xlsxFileInput'),
     btnAddScene: document.getElementById('btnAddScene'),
-    btnResetOrder: document.getElementById('btnResetOrder'),
     btnExport: document.getElementById('btnExport'),
 
-    // Modals
-    sheetsModal: document.getElementById('sheetsModal'),
-    sheetUrlInput: document.getElementById('sheetUrlInput'),
-    btnFetchSheet: document.getElementById('btnFetchSheet'),
-    csvFileInput: document.getElementById('csvFileInput'),
-    btnLoadDefaultData: document.getElementById('btnLoadDefaultData'),
-    
+    // Scene Edit Modal
     sceneModal: document.getElementById('sceneModal'),
     sceneModalTitle: document.getElementById('sceneModalTitle'),
     sceneForm: document.getElementById('sceneForm'),
@@ -72,6 +81,7 @@
     inputSceneRevealed: document.getElementById('inputSceneRevealed'),
     inputSceneSource: document.getElementById('inputSceneSource'),
 
+    // Export Modal
     exportModal: document.getElementById('exportModal'),
     exportPreviewText: document.getElementById('exportPreviewText'),
     btnCopyFormatted: document.getElementById('btnCopyFormatted'),
@@ -86,12 +96,12 @@
   // Initialization
   // ==========================================================================
   function init() {
-    loadSavedData();
+    loadScenesData();
     setupEventListeners();
     renderApp();
   }
 
-  function loadSavedData() {
+  function loadScenesData() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -101,11 +111,9 @@
       } else {
         state.scenes = [];
       }
-      state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
-      state.sheetUrl = localStorage.getItem(STORAGE_SHEET_KEY) || '';
-      if (elements.sheetUrlInput) elements.sheetUrlInput.value = state.sheetUrl;
+      state.originalScenes = (typeof DEFAULT_SCENES !== 'undefined') ? JSON.parse(JSON.stringify(DEFAULT_SCENES)) : JSON.parse(JSON.stringify(state.scenes));
     } catch (e) {
-      console.error('Error loading saved scenes:', e);
+      console.error('Error loading scenes:', e);
       state.scenes = (typeof DEFAULT_SCENES !== 'undefined') ? JSON.parse(JSON.stringify(DEFAULT_SCENES)) : [];
       state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
     }
@@ -120,22 +128,17 @@
   }
 
   // ==========================================================================
-  // Rendering
+  // Filtering & Rendering
   // ==========================================================================
-  function renderApp() {
-    updateFilterOptions();
-    renderScenes();
-    updateStats();
-  }
-
   function getFilteredScenes() {
     const query = state.filters.search.trim().toLowerCase();
-    const povFilter = state.filters.pov;
+    const povChar = state.filters.povChar;
+    const exactPov = state.filters.exactPov;
     const locationFilter = state.filters.location;
     const timeFilter = state.filters.time;
 
     return state.scenes.filter((scene) => {
-      // Search text across all fields
+      // Free text search
       if (query) {
         const textToSearch = [
           scene.id,
@@ -151,17 +154,24 @@
         if (!textToSearch.includes(query)) return false;
       }
 
-      // POV Filter
-      if (povFilter !== 'all' && scene.pov !== povFilter) {
+      // POV Character pill filter (checks if character is part of POV)
+      if (povChar !== 'all') {
+        if (!scene.pov || !scene.pov.includes(povChar)) {
+          return false;
+        }
+      }
+
+      // Exact POV dropdown filter
+      if (exactPov !== 'all' && scene.pov !== exactPov) {
         return false;
       }
 
-      // Location Filter
+      // Location filter
       if (locationFilter !== 'all' && scene.location !== locationFilter) {
         return false;
       }
 
-      // Time Filter
+      // Time filter
       if (timeFilter !== 'all' && scene.time !== timeFilter) {
         return false;
       }
@@ -170,12 +180,17 @@
     });
   }
 
+  function renderApp() {
+    updateFilterOptions();
+    renderScenes();
+    updateStats();
+  }
+
   function renderScenes() {
     const filteredScenes = getFilteredScenes();
     const container = elements.scenesContainer;
     container.innerHTML = '';
 
-    // Update container view mode class
     container.className = `scenes-container ${state.viewMode}-view`;
 
     if (filteredScenes.length === 0) {
@@ -187,14 +202,32 @@
     elements.emptyState.style.display = 'none';
     container.style.display = (state.viewMode === 'grid') ? 'grid' : 'flex';
 
+    // Fragment for fast DOM insertion with 124 cards
+    const fragment = document.createDocumentFragment();
+
     filteredScenes.forEach((scene) => {
-      // Global sequence index (1-based position in whole scenes array)
       const globalIndex = state.scenes.findIndex(s => s.id === scene.id) + 1;
       const card = createSceneCardElement(scene, globalIndex);
-      container.appendChild(card);
+      fragment.appendChild(card);
     });
 
+    container.appendChild(fragment);
     attachDragAndDropHandlers();
+  }
+
+  function getPovStyleClass(povText) {
+    if (!povText) return 'pov-generic';
+    if (povText.includes('שרה')) return 'pov-shara';
+    if (povText.includes('רפאל שאול')) return 'pov-raphael-shaul';
+    if (povText.includes('רפאל אלטרס')) return 'pov-raphael-altras';
+    if (povText.includes('מאיר')) return 'pov-meir';
+    if (povText.includes('סלווטור')) return 'pov-salvatore';
+    if (povText.includes('סולטנה')) return 'pov-sultana';
+    if (povText.includes('ניסים')) return 'pov-nissim';
+    if (povText.includes('מלכה')) return 'pov-malka';
+    if (povText.includes('לואיזה')) return 'pov-louisa';
+    if (povText.includes('סוזט')) return 'pov-souzette';
+    return 'pov-generic';
   }
 
   function createSceneCardElement(scene, sequenceNum) {
@@ -203,20 +236,17 @@
     card.setAttribute('draggable', 'true');
     card.dataset.id = scene.id;
 
-    // Timeline node indicator
     const timelineNodeHtml = state.viewMode === 'timeline' 
       ? `<div class="timeline-node" title="סצנה #${sequenceNum}">${sequenceNum}</div>` 
       : '';
 
-    // POV Class check
-    const knownPovs = ['שרה', 'רפאל', 'סלווטור', 'מלכה', 'סוזט', 'מאיר', 'ניסים'];
-    const povClass = knownPovs.includes(scene.pov) ? `pov-${scene.pov}` : 'pov-generic';
+    const povClass = getPovStyleClass(scene.pov);
 
     card.innerHTML = `
       ${timelineNodeHtml}
       <div class="card-top-row">
         <div class="card-identity">
-          <span class="drag-handle" title="גרור כדי לשנות סדר" aria-label="גרירה">
+          <span class="drag-handle" title="גרור כדי לסדר מחדש" aria-label="גרירה">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
           </span>
           <span class="scene-seq-badge">#${sequenceNum}</span>
@@ -242,13 +272,13 @@
 
       <div class="scene-meta-row">
         ${scene.pov ? `
-          <span class="meta-pill pov-pill ${povClass}" title="נקודת מבט">
+          <span class="meta-pill pov-pill ${povClass}" title="נקודת מבט (POV)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             ${escapeHtml(scene.pov)}
           </span>` : ''}
 
         ${scene.location ? `
-          <span class="meta-pill location-pill" title="מקום">
+          <span class="meta-pill location-pill" title="מיקום">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             ${escapeHtml(scene.location)}
           </span>` : ''}
@@ -275,7 +305,7 @@
       ` : ''}
 
       ${scene.source ? `
-        <div class="scene-source-footer" title="מקור או תיעוד">
+        <div class="scene-source-footer" title="מקור">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           <span>מקור: ${escapeHtml(scene.source)}</span>
         </div>
@@ -283,23 +313,16 @@
     `;
 
     // Action button listeners
-    const editBtn = card.querySelector('.edit-scene-btn');
-    if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(scene.id); });
-
-    const deleteBtn = card.querySelector('.delete-scene-btn');
-    if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteScene(scene.id); });
-
-    const moveUpBtn = card.querySelector('.move-up-btn');
-    if (moveUpBtn) moveUpBtn.addEventListener('click', (e) => { e.stopPropagation(); moveSceneRelative(scene.id, -1); });
-
-    const moveDownBtn = card.querySelector('.move-down-btn');
-    if (moveDownBtn) moveDownBtn.addEventListener('click', (e) => { e.stopPropagation(); moveSceneRelative(scene.id, 1); });
+    card.querySelector('.edit-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditModal(scene.id); });
+    card.querySelector('.delete-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteScene(scene.id); });
+    card.querySelector('.move-up-btn').addEventListener('click', (e) => { e.stopPropagation(); moveSceneRelative(scene.id, -1); });
+    card.querySelector('.move-down-btn').addEventListener('click', (e) => { e.stopPropagation(); moveSceneRelative(scene.id, 1); });
 
     return card;
   }
 
   // ==========================================================================
-  // Drag and Drop (HTML5 + Reorder Logic)
+  // Drag and Drop Logic
   // ==========================================================================
   function attachDragAndDropHandlers() {
     const cards = elements.scenesContainer.querySelectorAll('.scene-card');
@@ -320,11 +343,10 @@
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', this.dataset.id);
 
-    // If filtering is currently applied, warn that moving will affect global order
-    const isFiltered = state.filters.search || state.filters.pov !== 'all' || 
-                       state.filters.location !== 'all' || state.filters.time !== 'all';
+    const isFiltered = state.filters.search || state.filters.povChar !== 'all' || 
+                       state.filters.exactPov !== 'all' || state.filters.location !== 'all' || state.filters.time !== 'all';
     if (isFiltered) {
-      showToast('שים לב: סידור מחדש בזמן סינון ישנה את המיקום ברצף הכללי של הספר', 'info');
+      showToast('שים לב: הסידור מחדש משפיע על הרצף המלא של הספר', 'info');
     }
   }
 
@@ -356,7 +378,6 @@
 
     if (!sourceId || !targetId || sourceId === targetId) return;
 
-    // Perform reorder in state.scenes
     const fromIndex = state.scenes.findIndex(s => s.id === sourceId);
     const toIndex = state.scenes.findIndex(s => s.id === targetId);
 
@@ -392,46 +413,50 @@
   }
 
   // ==========================================================================
-  // Filters & Search
+  // Filter Options & Stats
   // ==========================================================================
   function updateFilterOptions() {
-    // Collect all unique POVs
-    const povCounts = {};
-    state.scenes.forEach(s => {
-      const p = s.pov ? s.pov.trim() : 'ללא POV';
-      povCounts[p] = (povCounts[p] || 0) + 1;
-    });
-
-    // Render POV Chips
+    // 1. Quick POV Character Pills
     const povChipsHtml = [`
-      <button class="pov-chip ${state.filters.pov === 'all' ? 'active' : ''}" data-pov="all">
+      <button class="pov-chip ${state.filters.povChar === 'all' ? 'active' : ''}" data-char="all">
         הכל <span class="chip-count">${state.scenes.length}</span>
       </button>
     `];
 
-    Object.keys(povCounts).sort().forEach(pov => {
-      povChipsHtml.push(`
-        <button class="pov-chip ${state.filters.pov === pov ? 'active' : ''}" data-pov="${escapeHtml(pov)}">
-          ${escapeHtml(pov)} <span class="chip-count">${povCounts[pov]}</span>
-        </button>
-      `);
+    PRIMARY_CHARACTERS.forEach(char => {
+      const count = state.scenes.filter(s => s.pov && s.pov.includes(char)).length;
+      if (count > 0) {
+        povChipsHtml.push(`
+          <button class="pov-chip ${state.filters.povChar === char ? 'active' : ''}" data-char="${escapeHtml(char)}">
+            ${escapeHtml(char)} <span class="chip-count">${count}</span>
+          </button>
+        `);
+      }
     });
 
     elements.povChipsContainer.innerHTML = povChipsHtml.join('');
     elements.povChipsContainer.querySelectorAll('.pov-chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        state.filters.pov = btn.dataset.pov;
+        state.filters.povChar = btn.dataset.char;
         renderApp();
       });
     });
 
-    // Update Location dropdown
+    // 2. Exact POV Dropdown
+    if (elements.povFilterSelect) {
+      const currentExact = state.filters.exactPov;
+      const allPovs = Array.from(new Set(state.scenes.map(s => s.pov).filter(Boolean))).sort();
+      elements.povFilterSelect.innerHTML = '<option value="all">כל הרכבי ה-POV</option>' +
+        allPovs.map(p => `<option value="${escapeHtml(p)}" ${p === currentExact ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
+    }
+
+    // 3. Location Dropdown
     const currentLoc = state.filters.location;
     const locations = Array.from(new Set(state.scenes.map(s => s.location).filter(Boolean))).sort();
-    elements.locationFilterSelect.innerHTML = '<option value="all">כל המקומות</option>' +
+    elements.locationFilterSelect.innerHTML = '<option value="all">כל המיקומים</option>' +
       locations.map(loc => `<option value="${escapeHtml(loc)}" ${loc === currentLoc ? 'selected' : ''}>${escapeHtml(loc)}</option>`).join('');
 
-    // Update Time dropdown
+    // 4. Time Dropdown
     const currentTime = state.filters.time;
     const times = Array.from(new Set(state.scenes.map(s => s.time).filter(Boolean))).sort();
     elements.timeFilterSelect.innerHTML = '<option value="all">כל הזמנים העלילתיים</option>' +
@@ -444,8 +469,8 @@
 
     elements.totalScenesCount.textContent = total;
     
-    const isFiltered = state.filters.search || state.filters.pov !== 'all' || 
-                       state.filters.location !== 'all' || state.filters.time !== 'all';
+    const isFiltered = state.filters.search || state.filters.povChar !== 'all' || 
+                       state.filters.exactPov !== 'all' || state.filters.location !== 'all' || state.filters.time !== 'all';
 
     if (isFiltered) {
       elements.filteredCountDisplay.textContent = `(מוצגות ${filtered})`;
@@ -453,8 +478,9 @@
       
       let filterDesc = [];
       if (state.filters.search) filterDesc.push(`חיפוש: "${state.filters.search}"`);
-      if (state.filters.pov !== 'all') filterDesc.push(`POV: ${state.filters.pov}`);
-      if (state.filters.location !== 'all') filterDesc.push(`מקום: ${state.filters.location}`);
+      if (state.filters.povChar !== 'all') filterDesc.push(`דמות: ${state.filters.povChar}`);
+      if (state.filters.exactPov !== 'all') filterDesc.push(`POV: ${state.filters.exactPov}`);
+      if (state.filters.location !== 'all') filterDesc.push(`מיקום: ${state.filters.location}`);
       if (state.filters.time !== 'all') filterDesc.push(`זמן: ${state.filters.time}`);
 
       elements.activeFilterText.textContent = filterDesc.join(', ');
@@ -468,135 +494,105 @@
 
   function clearAllFilters() {
     state.filters.search = '';
-    state.filters.pov = 'all';
+    state.filters.povChar = 'all';
+    state.filters.exactPov = 'all';
     state.filters.location = 'all';
     state.filters.time = 'all';
     elements.searchInput.value = '';
+    if (elements.povFilterSelect) elements.povFilterSelect.value = 'all';
     renderApp();
   }
 
   // ==========================================================================
-  // Google Sheets & CSV Parser
+  // Excel File (.xlsx) Parsing & Reload
   // ==========================================================================
-  async function fetchGoogleSheet(url) {
-    if (!url || !url.trim()) {
-      showToast('נא להזין קישור תקין ל-Google Sheets', 'warning');
-      return;
-    }
-
-    let csvUrl = url.trim();
-
-    // Transform typical Google Sheets URL to exportable CSV URL
-    const match = csvUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    if (match && match[1]) {
-      const sheetId = match[1];
-      const gidMatch = csvUrl.match(/[#&?]gid=([0-9]+)/);
-      const gidParam = gidMatch ? `&gid=${gidMatch[1]}` : '';
-      csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gidParam}`;
-    }
-
-    showToast('טוען נתונים מ-Google Sheets...', 'info');
-
-    try {
-      const response = await fetch(csvUrl);
-      if (!response.ok) {
-        throw new Error(`שגיאת רשת (${response.status}): ודא שהטבלה משותפת לצפייה לכל מי שיש לו קישור.`);
+  function reloadOriginalScenesFile() {
+    if (confirm("האם לאפס את כל השינויים ולטעון מחדש את 124 הסצנות מקובץ המקור 'סצנות לספר.xlsx'?")) {
+      if (typeof DEFAULT_SCENES !== 'undefined') {
+        state.scenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
+        saveData();
+        clearAllFilters();
+        showToast("נטענו מחדש 124 הסצנות מקובץ 'סצנות לספר.xlsx'", 'success');
       }
-      const csvText = await response.text();
-      parseAndApplyCsvData(csvText);
-      state.sheetUrl = url;
-      localStorage.setItem(STORAGE_SHEET_KEY, url);
-      closeAllModals();
-      showToast('הנתונים נטענו מ-Google Sheets בהצלחה!', 'success');
-    } catch (err) {
-      console.error('Fetch error:', err);
-      // Fallback hint
-      showToast(`נכשל בטעינה ישירה: ${err.message}. טיפ: בצע 'קובץ' > 'שיתוף' > 'פרסם באינטרנט' > 'CSV'`, 'warning');
     }
   }
 
-  function parseAndApplyCsvData(csvString) {
-    const rows = parseCSV(csvString);
-    if (!rows || rows.length < 2) {
-      showToast('קובץ ה-CSV אינו מכיל מספיק שורות או כותרות עמודות.', 'warning');
+  function handleXlsxFileUpload(file) {
+    if (!file) return;
+
+    if (typeof XLSX === 'undefined') {
+      showToast('ספריית קריאת האקסל נטענת... נסה שנית בעוד רגע', 'warning');
       return;
     }
 
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    
-    // Column header mapping dictionary (Hebrew & English variants)
-    const mapKey = (headerName) => {
-      const h = headerName.toLowerCase();
-      if (h.includes('מזהה') || h.includes('קוד') || h.includes('מספר') || h === 'id' || h.includes('scene_id') || h.includes('scene id')) return 'id';
-      if (h.includes('כותרת') || h.includes('שם סצנה') || h === 'title' || h === 'name') return 'title';
-      if (h.includes('מבט') || h.includes('דמות') || h === 'pov' || h.includes('point of view')) return 'pov';
-      if (h.includes('מקום') || h.includes('מיקום') || h.includes('אתר') || h === 'location' || h === 'place') return 'location';
-      if (h.includes('זמן') || h.includes('תאריך') || h === 'time' || h === 'timeline' || h === 'date') return 'time';
-      if (h.includes('תקציר') || h.includes('עלילה') || h.includes('תיאור') || h === 'summary' || h === 'synopsis' || h === 'description') return 'summary';
-      if (h.includes('נחשף') || h.includes('מידע') || h.includes('גילוי') || h.includes('revealed') || h.includes('secrets')) return 'revealedInfo';
-      if (h.includes('מקור') || h.includes('הערה') || h.includes('טיוטה') || h === 'source' || h === 'notes' || h === 'reference') return 'source';
-      return null;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (!jsonRows || jsonRows.length < 2) {
+          showToast('הקובץ אינו מכיל נתונים מספקים', 'warning');
+          return;
+        }
+
+        const headers = jsonRows[0].map(h => (h ? h.toString().trim().toLowerCase() : ''));
+        
+        const mapKey = (headerName) => {
+          const h = headerName.toLowerCase();
+          if (h.includes('מזהה') || h.includes('קוד') || h.includes('מספר') || h === 'id' || h.includes('scene_id')) return 'id';
+          if (h.includes('כותרת') || h.includes('שם סצנה') || h === 'title') return 'title';
+          if (h.includes('מבט') || h.includes('דמות') || h === 'pov') return 'pov';
+          if (h.includes('מקום') || h.includes('מיקום') || h.includes('אתר') || h === 'location') return 'location';
+          if (h.includes('זמן') || h.includes('תאריך') || h === 'time') return 'time';
+          if (h.includes('תקציר') || h.includes('עלילה') || h === 'summary') return 'summary';
+          if (h.includes('נחשף') || h.includes('מידע') || h === 'revealed') return 'revealedInfo';
+          if (h.includes('מקור') || h.includes('הערה') || h === 'source') return 'source';
+          return null;
+        };
+
+        const headerMap = {};
+        headers.forEach((h, idx) => {
+          const field = mapKey(h);
+          if (field) headerMap[field] = idx;
+        });
+
+        const parsedScenes = [];
+        for (let i = 1; i < jsonRows.length; i++) {
+          const row = jsonRows[i];
+          if (!row || row.length === 0) continue;
+
+          const id = headerMap.id !== undefined && row[headerMap.id] ? String(row[headerMap.id]).trim() : `scene_${i}`;
+          const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : `סצנה ${i}`;
+          const pov = headerMap.pov !== undefined && row[headerMap.pov] ? String(row[headerMap.pov]).trim() : '';
+          const location = headerMap.location !== undefined && row[headerMap.location] ? String(row[headerMap.location]).trim() : '';
+          const time = headerMap.time !== undefined && row[headerMap.time] ? String(row[headerMap.time]).trim() : '';
+          const summary = headerMap.summary !== undefined && row[headerMap.summary] ? String(row[headerMap.summary]).trim() : '';
+          const revealedInfo = headerMap.revealedInfo !== undefined && row[headerMap.revealedInfo] ? String(row[headerMap.revealedInfo]).trim() : '';
+          const source = headerMap.source !== undefined && row[headerMap.source] ? String(row[headerMap.source]).trim() : '';
+
+          if (id || title || summary) {
+            parsedScenes.push({ id, title, pov, location, time, summary, revealedInfo, source });
+          }
+        }
+
+        if (parsedScenes.length > 0) {
+          state.scenes = parsedScenes;
+          saveData();
+          renderApp();
+          showToast(`נטענו בהצלחה ${parsedScenes.length} סצנות מקובץ האקסל המעודכן!`, 'success');
+        } else {
+          showToast('לא זוהו סצנות תקינות בקובץ', 'warning');
+        }
+      } catch (err) {
+        console.error('Error parsing xlsx:', err);
+        showToast('שגיאה בפענוח קובץ האקסל', 'warning');
+      }
     };
-
-    const headerMap = {};
-    headers.forEach((h, idx) => {
-      const field = mapKey(h);
-      if (field) headerMap[field] = idx;
-    });
-
-    const parsedScenes = [];
-
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (row.length === 0 || (row.length === 1 && !row[0].trim())) continue;
-
-      const scene = {
-        id: headerMap.id !== undefined && row[headerMap.id] ? row[headerMap.id].trim() : `SC-${String(i).padStart(2, '0')}`,
-        title: headerMap.title !== undefined && row[headerMap.title] ? row[headerMap.title].trim() : `סצנה ${i}`,
-        pov: headerMap.pov !== undefined && row[headerMap.pov] ? row[headerMap.pov].trim() : '',
-        location: headerMap.location !== undefined && row[headerMap.location] ? row[headerMap.location].trim() : '',
-        time: headerMap.time !== undefined && row[headerMap.time] ? row[headerMap.time].trim() : '',
-        summary: headerMap.summary !== undefined && row[headerMap.summary] ? row[headerMap.summary].trim() : '',
-        revealedInfo: headerMap.revealedInfo !== undefined && row[headerMap.revealedInfo] ? row[headerMap.revealedInfo].trim() : '',
-        source: headerMap.source !== undefined && row[headerMap.source] ? row[headerMap.source].trim() : ''
-      };
-
-      parsedScenes.push(scene);
-    }
-
-    if (parsedScenes.length > 0) {
-      state.scenes = parsedScenes;
-      state.originalScenes = JSON.parse(JSON.stringify(parsedScenes));
-      saveData();
-      renderApp();
-      showToast(`נטענו בהצלחה ${parsedScenes.length} סצנות!`, 'success');
-    } else {
-      showToast('לא זוהו סצנות תקינות בטבלה. בדוק את שמות העמודות.', 'warning');
-    }
-  }
-
-  // Robust RFC 4180 CSV Parser (handles multiline cells, quotes, commas)
-  function parseCSV(text) {
-    const p = '', row = [''];
-    const ret = [row];
-    let i = 0, r = 0, s = !0, l;
-    for (l of text) {
-      if ('"' === l) {
-        if (s && l === p) row[i] += l;
-        s = !s;
-      } else if (',' === l && s) {
-        l = row[++i] = '';
-      } else if ('\n' === l && s) {
-        if ('\r' === p) row[i] = row[i].slice(0, -1);
-        row = ret[++r] = [l = ''];
-        i = 0;
-      } else {
-        row[i] += l;
-      }
-      p = l;
-    }
-    // Clean trailing empty rows
-    return ret.filter(r => r.some(cell => cell.trim().length > 0));
+    reader.readAsArrayBuffer(file);
   }
 
   // ==========================================================================
@@ -607,9 +603,8 @@
     elements.sceneModalTitle.textContent = 'הוספת סצנה חדשה';
     elements.sceneForm.reset();
     
-    // Suggest next ID
     const nextNum = state.scenes.length + 1;
-    elements.inputSceneId.value = `SC-${String(nextNum).padStart(2, '0')}`;
+    elements.inputSceneId.value = `scene_${nextNum}`;
     
     openModal(elements.sceneModal);
   }
@@ -637,7 +632,7 @@
     e.preventDefault();
 
     const sceneData = {
-      id: elements.inputSceneId.value.trim() || `SC-${Date.now().toString().slice(-4)}`,
+      id: elements.inputSceneId.value.trim() || `scene_${Date.now().toString().slice(-4)}`,
       title: elements.inputSceneTitle.value.trim() || 'ללא כותרת',
       pov: elements.inputScenePov.value.trim(),
       location: elements.inputSceneLocation.value.trim(),
@@ -648,14 +643,12 @@
     };
 
     if (state.editingSceneId) {
-      // Edit existing
       const index = state.scenes.findIndex(s => s.id === state.editingSceneId);
       if (index !== -1) {
         state.scenes[index] = { ...state.scenes[index], ...sceneData };
         showToast('הסצנה עודכנה בהצלחה', 'success');
       }
     } else {
-      // Add new to the end
       state.scenes.push(sceneData);
       showToast('סצנה חדשה נוספה לספר', 'success');
     }
@@ -677,15 +670,6 @@
     }
   }
 
-  function resetToOriginalOrder() {
-    if (confirm('האם לאפס את סדר כל הסצנות לסדר המקורי שנטען?')) {
-      state.scenes = JSON.parse(JSON.stringify(state.originalScenes));
-      saveData();
-      renderApp();
-      showToast('הסדר המקורי שוחזר בהצלחה', 'success');
-    }
-  }
-
   // ==========================================================================
   // Export Functions
   // ==========================================================================
@@ -704,7 +688,7 @@
 
       const meta = [];
       if (scene.pov) meta.push(`נקודת מבט (POV): ${scene.pov}`);
-      if (scene.location) meta.push(`מקום: ${scene.location}`);
+      if (scene.location) meta.push(`מיקום: ${scene.location}`);
       if (scene.time) meta.push(`זמן עלילתי: ${scene.time}`);
       if (meta.length) parts.push(meta.join(' | '));
 
@@ -717,7 +701,7 @@
   }
 
   function generateCsvContent() {
-    const headers = ['סדר חדש', 'מזהה סצנה', 'כותרת הסצנה', 'נקודת מבט (POV)', 'מקום', 'זמן עלילתי', 'תקציר העלילה', 'מידע שנחשף', 'מקור'];
+    const headers = ['סדר חדש', 'מזהה סצנה', 'כותרת הסצנה', 'זמן עלילתי', 'מיקום', 'נקודת מבט (POV)', 'תקציר העלילה', 'מידע שנחשף', 'מקור'];
     
     const escapeCsv = (str) => {
       if (!str) return '""';
@@ -728,9 +712,9 @@
       idx + 1,
       escapeCsv(s.id),
       escapeCsv(s.title),
-      escapeCsv(s.pov),
-      escapeCsv(s.location),
       escapeCsv(s.time),
+      escapeCsv(s.location),
+      escapeCsv(s.pov),
       escapeCsv(s.summary),
       escapeCsv(s.revealedInfo),
       escapeCsv(s.source)
@@ -743,7 +727,7 @@
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(() => {
         showToast(successMessage, 'success');
-      }).catch(err => {
+      }).catch(() => {
         fallbackCopyTextToClipboard(text, successMessage);
       });
     } else {
@@ -769,7 +753,7 @@
   }
 
   function downloadFile(content, fileName, mimeType) {
-    // Add UTF-8 BOM (\uFEFF) for CSV so Excel displays Hebrew perfectly without gibberish
+    // Add UTF-8 BOM (\uFEFF) for CSV so Excel displays Hebrew perfectly
     const blob = new Blob([mimeType.includes('csv') ? '\uFEFF' + content : content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -812,17 +796,13 @@
     toast.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
     elements.toastContainer.appendChild(toast);
 
-    // Animate in
     setTimeout(() => toast.classList.add('show'), 10);
-
-    // Auto remove
     setTimeout(() => {
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 300);
     }, 3500);
   }
 
-  // Helper
   function escapeHtml(text) {
     if (!text) return '';
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
@@ -830,7 +810,7 @@
   }
 
   // ==========================================================================
-  // Event Listeners Setup
+  // Event Listeners
   // ==========================================================================
   function setupEventListeners() {
     // Search
@@ -846,6 +826,13 @@
     });
 
     // Dropdown Filters
+    if (elements.povFilterSelect) {
+      elements.povFilterSelect.addEventListener('change', (e) => {
+        state.filters.exactPov = e.target.value;
+        renderApp();
+      });
+    }
+
     elements.locationFilterSelect.addEventListener('change', (e) => {
       state.filters.location = e.target.value;
       renderApp();
@@ -858,7 +845,7 @@
 
     elements.clearFiltersBtn.addEventListener('click', clearAllFilters);
 
-    // View Switcher Buttons
+    // View Switcher
     elements.viewGridBtn.addEventListener('click', () => {
       state.viewMode = 'grid';
       updateViewButtons();
@@ -884,12 +871,21 @@
     }
 
     // Top action triggers
-    elements.btnSyncSheets.addEventListener('click', () => openModal(elements.sheetsModal));
+    elements.btnReloadOriginalFile.addEventListener('click', reloadOriginalScenesFile);
+    
+    elements.btnUploadXlsx.addEventListener('click', () => {
+      elements.xlsxFileInput.click();
+    });
+
+    elements.xlsxFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleXlsxFileUpload(file);
+    });
+
     elements.btnAddScene.addEventListener('click', openAddModal);
-    elements.btnResetOrder.addEventListener('click', resetToOriginalOrder);
     elements.btnExport.addEventListener('click', openExportModal);
 
-    // Modal Close buttons (click on close button or click on overlay outside modal)
+    // Modal Close
     document.querySelectorAll('.modal-close-btn, .btn-modal-cancel').forEach(btn => {
       btn.addEventListener('click', closeAllModals);
     });
@@ -899,37 +895,6 @@
         if (e.target === overlay) closeAllModals();
       });
     });
-
-    // Sheets Modal Actions
-    elements.btnFetchSheet.addEventListener('click', () => {
-      fetchGoogleSheet(elements.sheetUrlInput.value);
-    });
-
-    elements.btnLoadDefaultData.addEventListener('click', () => {
-      if (typeof DEFAULT_SCENES !== 'undefined') {
-        state.scenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
-        state.originalScenes = JSON.parse(JSON.stringify(DEFAULT_SCENES));
-        saveData();
-        closeAllModals();
-        renderApp();
-        showToast('נטענו נתוני הדוגמה המקוריים', 'success');
-      }
-    });
-
-    // File input for local CSV upload
-    if (elements.csvFileInput) {
-      elements.csvFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          parseAndApplyCsvData(event.target.result);
-          closeAllModals();
-        };
-        reader.readAsText(file, 'UTF-8');
-      });
-    }
 
     // Scene Form Submit
     elements.sceneForm.addEventListener('submit', handleSceneFormSubmit);
@@ -941,7 +906,7 @@
 
     elements.btnCopyCsv.addEventListener('click', () => {
       const csv = generateCsvContent();
-      copyToClipboard(csv, 'טבלת ה-CSV הועתקה ללוח! ניתן להדביק ישירות ל-Google Sheets');
+      copyToClipboard(csv, 'טבלת ה-CSV הועתקה ללוח!');
     });
 
     elements.btnDownloadCsv.addEventListener('click', () => {
@@ -956,12 +921,10 @@
       downloadFile(json, `scenes-backup-${date}.json`, 'application/json;charset=utf-8;');
     });
 
-    // Keyboard shortcuts (Escape to close modals)
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeAllModals();
     });
   }
 
-  // Start App
   document.addEventListener('DOMContentLoaded', init);
 })();

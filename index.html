@@ -26,24 +26,30 @@
             </svg>
           </div>
           <div class="brand-titles">
-            <h1>לוח עריכת סצנות לספר</h1>
-            <span class="tagline">סידור עלילתי, מעקב נקודות מבט (POV), וחשיפת מידע</span>
+            <h1>
+              <span>לוח עריכת סצנות לספר</span>
+              <span class="source-pill">סצנות לספר.xlsx</span>
+            </h1>
+            <span class="tagline">סידור עלילתי, מעקב נקודות מבט (POV), מקום, זמן וחשיפת מידע</span>
           </div>
         </div>
 
         <div class="header-actions">
-          <button class="btn btn-secondary" id="btnSyncSheets" title="חבר או טען נתונים מטבלת Google Sheets">
+          <!-- Hidden file input for updated XLSX -->
+          <input type="file" id="xlsxFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+
+          <button class="btn btn-secondary" id="btnUploadXlsx" title="העלה גרסה מעודכנת של קובץ 'סצנות לספר.xlsx'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
             </svg>
-            <span>טעינה מ-Google Sheets</span>
+            <span>עדכון מקובץ אקסל</span>
           </button>
 
-          <button class="btn btn-secondary" id="btnResetOrder" title="שחזר את סדר הסצנות המקורי">
+          <button class="btn btn-secondary" id="btnReloadOriginalFile" title="שחזר את 124 הסצנות המקוריות מקובץ 'סצנות לספר.xlsx'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
-            <span>איפוס סדר</span>
+            <span>איפוס לסדר המקור</span>
           </button>
 
           <button class="btn btn-secondary" id="btnExport" title="ייצוא הסדר החדש או העתקה ללוח">
@@ -71,20 +77,25 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חופשי (כותרת, תקציר, מידע שנחשף, מקום)..." aria-label="חיפוש סצנה">
+          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חופשי (כותרת, תקציר, מידע שנחשף, מקום, זמן)..." aria-label="חיפוש סצנה">
           <button id="searchClearBtn" class="search-clear-btn" title="נקה חיפוש">&times;</button>
         </div>
 
         <!-- Filter Controls -->
         <div class="filter-controls">
-          <!-- POV Filter Chips -->
-          <div class="pov-chips-container" id="povChipsContainer">
+          <!-- POV Quick Character Chips -->
+          <div class="pov-chips-container" id="povChipsContainer" title="סינון מהיר לפי דמויות מרכזיות">
             <!-- Dynamically populated -->
           </div>
 
+          <!-- Exact POV Dropdown -->
+          <select id="povFilterSelect" class="filter-select" aria-label="סינון לפי הרכב POV מלא">
+            <option value="all">כל הרכבי ה-POV</option>
+          </select>
+
           <!-- Location Dropdown -->
           <select id="locationFilterSelect" class="filter-select" aria-label="סינון לפי מקום">
-            <option value="all">כל המקומות</option>
+            <option value="all">כל המיקומים</option>
           </select>
 
           <!-- Time Dropdown -->
@@ -99,11 +110,11 @@
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>רשת</span>
           </button>
-          <button id="viewTimelineBtn" class="view-mode-btn" title="תצוגת ציר עלילה כרונולוגי">
+          <button id="viewTimelineBtn" class="view-mode-btn" title="תצוגת ציר עלילה כרונולוגי רציף">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 3v6m0 6v6"/></svg>
             <span>ציר רציף</span>
           </button>
-          <button id="viewCompactBtn" class="view-mode-btn" title="תצוגה קומפקטית לסידור מהיר">
+          <button id="viewCompactBtn" class="view-mode-btn" title="תצוגה קומפקטית לסידור מהיר בין 124 הסצנות">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
             <span>קומפקטי</span>
           </button>
@@ -114,21 +125,21 @@
     <!-- Quick Status / Info Bar -->
     <div class="status-bar">
       <div class="stats-left">
-        <span class="stat-pill">סה"כ סצנות: <strong id="totalScenesCount">0</strong></span>
-        <span id="filteredCountDisplay" style="color: var(--primary); font-weight: 600;"></span>
+        <span class="stat-pill">סה"כ סצנות בספר: <strong id="totalScenesCount">124</strong></span>
+        <span id="filteredCountDisplay" style="color: var(--primary); font-weight: 700;"></span>
         <span class="active-filter-badge" id="activeFilterBadge" style="display: none;">
           <span id="activeFilterText"></span>
           <a href="javascript:void(0)" id="clearFiltersBtn" class="clear-filters-link">(נקה סינונים)</a>
         </span>
       </div>
       <div>
-        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות כדי לסדר מחדש את רצף העלילה</span>
+        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות כדי לשנות את סדר הסצנות • השינויים נשמרים אוטומטית</span>
       </div>
     </div>
 
     <!-- Main Content Area -->
     <main class="content-area">
-      <!-- Container for Scene Cards (Rendered via JS) -->
+      <!-- Container for Scene Cards -->
       <div id="scenesContainer" class="scenes-container grid-view">
         <!-- Rendered by app.js -->
       </div>
@@ -138,66 +149,15 @@
         <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
         </svg>
-        <h3>לא נמצאו סצנות תואמות</h3>
-        <p>נסה לשנות את מילות החיפוש או לאפס את הסינונים הנבחרים.</p>
+        <h3>לא נמצאו סצנות תואמות לסינון</h3>
+        <p>נסה לשנות את מילות החיפוש או לאפס את הסינונים שנבחרו.</p>
         <button class="btn btn-secondary" onclick="document.getElementById('clearFiltersBtn').click()">נקה את כל הסינונים</button>
       </div>
     </main>
   </div>
 
   <!-- ==========================================================================
-       MODAL 1: Google Sheets Connection & Import
-       ========================================================================== -->
-  <div class="modal-overlay" id="sheetsModal" role="dialog" aria-modal="true">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>חיבור וטעינה מטבלת Google Sheets</h3>
-        <button class="modal-close-btn" aria-label="סגור">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="guide-box">
-          <strong>כיצד לטעון את הטבלה שלך?</strong>
-          <ol>
-            <li>בטבלת Google Sheets שלך, לחץ על <code>שיתוף (Share)</code> ושנה ל-<code>כל מי שקיבל את הקישור יכול לצפות</code>.</li>
-            <li>או לחץ על <code>קובץ (File)</code> &gt; <code>שיתוף</code> &gt; <code>פרסם באינטרנט (Publish to web)</code> &gt; בחר בפורמט <code>ערכים מופרדים בפסיקים (.csv)</code>.</li>
-            <li>הדבק את הקישור בתיבה מטה ולחץ על <strong>טען נתונים</strong>.</li>
-          </ol>
-        </div>
-
-        <div class="form-group">
-          <label for="sheetUrlInput">קישור לטבלת Google Sheets (URL):</label>
-          <input type="url" id="sheetUrlInput" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
-          <span class="field-hint">המערכת תמפה אוטומטית עמודות לפי שמות: מזהה, כותרת, נקודת מבט (POV), מקום, זמן, תקציר, מידע שנחשף, מקור.</span>
-        </div>
-
-        <div style="display: flex; gap: 0.75rem; align-items: center;">
-          <button class="btn btn-primary" id="btnFetchSheet" style="flex: 1;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            <span>טען נתונים מהקישור</span>
-          </button>
-        </div>
-
-        <hr style="border: none; border-top: 1px dashed var(--border-light); margin: 0.5rem 0;">
-
-        <div class="form-group">
-          <label>או טען מקובץ מקומי (CSV / גיבוי):</label>
-          <input type="file" id="csvFileInput" accept=".csv" class="form-input" style="padding: 0.4rem;">
-        </div>
-
-        <div style="text-align: center; margin-top: 0.5rem;">
-          <button class="btn btn-ghost" id="btnLoadDefaultData" style="font-size: 0.82rem;">
-            <span>שחזר נתוני דוגמה עשירים (8 סצנות מובנות)</span>
-          </button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary btn-modal-cancel">סגור</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================================================
-       MODAL 2: Add / Edit Scene
+       MODAL 1: Add / Edit Scene
        ========================================================================== -->
   <div class="modal-overlay" id="sceneModal" role="dialog" aria-modal="true">
     <div class="modal-content">
@@ -210,7 +170,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="inputSceneId">מזהה סצנה (ID):</label>
-              <input type="text" id="inputSceneId" class="form-input" required placeholder="למשל SC-01">
+              <input type="text" id="inputSceneId" class="form-input" required placeholder="למשל scene_125">
             </div>
             <div class="form-group" style="flex: 2;">
               <label for="inputSceneTitle">כותרת הסצנה:</label>
@@ -221,15 +181,15 @@
           <div class="form-row">
             <div class="form-group">
               <label for="inputScenePov">נקודת מבט (POV):</label>
-              <input type="text" id="inputScenePov" class="form-input" placeholder="שם הדמות (שרה, רפאל...)">
+              <input type="text" id="inputScenePov" class="form-input" placeholder="שם הדמות (שרה, רפאל שאול...)">
             </div>
             <div class="form-group">
-              <label for="inputSceneLocation">מקום:</label>
-              <input type="text" id="inputSceneLocation" class="form-input" placeholder="למשל רציף הנמל, בית הקפה">
+              <label for="inputSceneLocation">מיקום:</label>
+              <input type="text" id="inputSceneLocation" class="form-input" placeholder="למשל איסטנבול, נמל סלוניקי">
             </div>
             <div class="form-group">
               <label for="inputSceneTime">זמן עלילתי:</label>
-              <input type="text" id="inputSceneTime" class="form-input" placeholder="למשל אוקטובר 1940, בין ערביים">
+              <input type="text" id="inputSceneTime" class="form-input" placeholder="למשל 1921 (צהריים)">
             </div>
           </div>
 
@@ -240,12 +200,12 @@
 
           <div class="form-group">
             <label for="inputSceneRevealed">מידע שנחשף בסצנה:</label>
-            <textarea id="inputSceneRevealed" class="form-textarea" rows="2" placeholder="סודות, גילויים או מידע חדש שנחשף לדמויות או לקורא"></textarea>
+            <textarea id="inputSceneRevealed" class="form-textarea" rows="2" placeholder="סודות, גילויים או מידע חדש שנחשף"></textarea>
           </div>
 
           <div class="form-group">
-            <label for="inputSceneSource">מקור / הערות טיוטה:</label>
-            <input type="text" id="inputSceneSource" class="form-input" placeholder="קישור לטיוטה, עמוד, או מקור היסטורי">
+            <label for="inputSceneSource">מקור:</label>
+            <input type="text" id="inputSceneSource" class="form-input" placeholder="למשל 1 שרה 1">
           </div>
         </div>
 
@@ -258,7 +218,7 @@
   </div>
 
   <!-- ==========================================================================
-       MODAL 3: Export
+       MODAL 2: Export
        ========================================================================== -->
   <div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true">
     <div class="modal-content">
@@ -268,7 +228,7 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 0.88rem; color: var(--text-muted);">
-          להלן רצף הסצנות המסודר לפי הסדר שקבעת בלוח הגרירה. תוכל להעתיק כטקסט מעוצב, להעתיק כטבלה מוכנה להדבקה ב-Google Sheets, או להוריד כקובץ.
+          להלן רצף הסצנות המסודר לפי הסדר שקבעת בלוח הגרירה. ניתן להעתיק כטקסט מעוצב, להעתיק כטבלה, או להוריד כקובץ.
         </p>
 
         <div class="form-group">
@@ -284,12 +244,12 @@
           
           <button class="btn btn-accent" id="btnCopyCsv">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-            <span>העתק טבלה (להדבקה ב-Sheets)</span>
+            <span>העתק טבלה ללוח</span>
           </button>
 
           <button class="btn btn-secondary" id="btnDownloadCsv">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>הורד קובץ טבלה (CSV עם UTF-8)</span>
+            <span>הורד טבלה (CSV עם UTF-8 לאקסל)</span>
           </button>
 
           <button class="btn btn-secondary" id="btnDownloadJson">
@@ -307,7 +267,9 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Scripts -->
+  <!-- Libraries & Scripts -->
+  <!-- SheetJS for client-side Excel XLSX reading if updating file in browser -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="scenes-data.js"></script>
   <script src="app.js"></script>
 </body>
