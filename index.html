@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -219,6 +219,32 @@
             <label for="inputSceneSource">מקור:</label>
             <input type="text" id="inputSceneSource" class="form-input" placeholder="למשל 1 שרה 1">
           </div>
+
+          <!-- Scene Sequence Repositioning Field -->
+          <div class="reposition-box">
+            <div class="reposition-box-header">
+              <div class="reposition-box-title">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                </svg>
+                <span>שינוי מיקום ברצף הספר</span>
+              </div>
+              <span class="current-seq-tag" id="modalCurrentSeqTag">מיקום נוכחי: #1</span>
+            </div>
+
+            <div class="reposition-box-content">
+              <div class="reposition-input-group">
+                <label for="inputScenePosition">העבר כרטיסיה זו כך שתופיע <strong>אחרי כרטיסיה מס':</strong></label>
+                <div class="reposition-input-wrapper">
+                  <input type="number" id="inputScenePosition" class="form-input reposition-input" min="0" placeholder="לדוגמה: 115 (0 לתחילת הספר)">
+                  <div class="reposition-feedback" id="repositionFeedback"></div>
+                </div>
+              </div>
+              <div class="reposition-help-text">
+                💡 הזן את מספר הכרטיסיה שברצונך למקם אחריה (לדוגמה <strong>115</strong> כדי למקם מיד אחרי כרטיסיה #115). השאר ריק לשמירה על המיקום הנוכחי.
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -282,8 +308,8 @@
   <!-- Libraries & Data -->
   <!-- SheetJS for local Excel parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="excel-data.js?v=9"></script>
-  <script src="scenes-data.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="excel-data.js?v=10"></script>
+  <script src="scenes-data.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

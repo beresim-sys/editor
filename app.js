@@ -178,6 +178,9 @@
     inputSceneSummary: document.getElementById('inputSceneSummary'),
     inputSceneRevealed: document.getElementById('inputSceneRevealed'),
     inputSceneSource: document.getElementById('inputSceneSource'),
+    inputScenePosition: document.getElementById('inputScenePosition'),
+    modalCurrentSeqTag: document.getElementById('modalCurrentSeqTag'),
+    repositionFeedback: document.getElementById('repositionFeedback'),
 
     // Export Modal
     exportModal: document.getElementById('exportModal'),
@@ -911,7 +914,64 @@
     const nextNum = state.scenes.length + 1;
     elements.inputSceneId.value = `scene_${nextNum}`;
     
+    if (elements.modalCurrentSeqTag) {
+      elements.modalCurrentSeqTag.textContent = `מיקום ברירת מחדל: בסוף הספר (#${nextNum})`;
+    }
+    if (elements.inputScenePosition) elements.inputScenePosition.value = '';
+    if (elements.repositionFeedback) {
+      elements.repositionFeedback.textContent = '';
+      elements.repositionFeedback.className = 'reposition-feedback';
+    }
+    
     openModal(elements.sceneModal);
+  }
+
+  function updateRepositionFeedback() {
+    if (!elements.repositionFeedback || !elements.inputScenePosition) return;
+    const rawVal = elements.inputScenePosition.value.trim();
+    if (!rawVal) {
+      elements.repositionFeedback.textContent = '';
+      elements.repositionFeedback.className = 'reposition-feedback';
+      return;
+    }
+
+    const targetNum = parseInt(rawVal, 10);
+    if (isNaN(targetNum) || targetNum < 0) {
+      elements.repositionFeedback.textContent = 'מספר כרטיסיה לא תקין';
+      elements.repositionFeedback.className = 'reposition-feedback target-invalid';
+      return;
+    }
+
+    if (targetNum === 0) {
+      elements.repositionFeedback.textContent = '← תועבר לתחילת הספר (כרטיסיה ראשונה #1)';
+      elements.repositionFeedback.className = 'reposition-feedback target-top';
+      return;
+    }
+
+    const currentIdx = state.editingSceneId 
+      ? state.scenes.findIndex(s => s.id === state.editingSceneId) 
+      : -1;
+    const currentSeq = currentIdx !== -1 ? currentIdx + 1 : -1;
+
+    if (currentSeq !== -1 && targetNum === currentSeq) {
+      elements.repositionFeedback.textContent = '← מיקום זהה למיקום הנוכחי (ללא שינוי)';
+      elements.repositionFeedback.className = 'reposition-feedback target-same';
+      return;
+    }
+
+    if (targetNum > state.scenes.length) {
+      const lastScene = state.scenes[state.scenes.length - 1];
+      const lastTitle = lastScene ? ` "${lastScene.title}"` : '';
+      elements.repositionFeedback.textContent = `← תועבר לסוף הספר (אחרי #${state.scenes.length}${lastTitle})`;
+      elements.repositionFeedback.className = 'reposition-feedback target-found';
+      return;
+    }
+
+    const targetScene = state.scenes[targetNum - 1];
+    if (targetScene) {
+      elements.repositionFeedback.textContent = `← תמוקם מיד אחרי כרטיסיה #${targetNum}: "${targetScene.title}"`;
+      elements.repositionFeedback.className = 'reposition-feedback target-found';
+    }
   }
 
   function openEditModal(sceneId) {
@@ -929,6 +989,17 @@
     elements.inputSceneSummary.value = scene.summary || '';
     elements.inputSceneRevealed.value = scene.revealedInfo || '';
     elements.inputSceneSource.value = scene.source || '';
+
+    const currentIndex = state.scenes.findIndex(s => s.id === sceneId);
+    const currentSeqNum = currentIndex !== -1 ? currentIndex + 1 : 1;
+    if (elements.modalCurrentSeqTag) {
+      elements.modalCurrentSeqTag.textContent = `מיקום נוכחי: #${currentSeqNum} מתוך ${state.scenes.length}`;
+    }
+    if (elements.inputScenePosition) elements.inputScenePosition.value = '';
+    if (elements.repositionFeedback) {
+      elements.repositionFeedback.textContent = '';
+      elements.repositionFeedback.className = 'reposition-feedback';
+    }
 
     openModal(elements.sceneModal);
   }
@@ -955,15 +1026,60 @@
       source: elements.inputSceneSource.value.trim()
     };
 
+    const posVal = elements.inputScenePosition ? elements.inputScenePosition.value.trim() : '';
+
     if (state.editingSceneId) {
-      const index = state.scenes.findIndex(s => s.id === state.editingSceneId);
-      if (index !== -1) {
-        state.scenes[index] = { ...state.scenes[index], ...sceneData };
-        showToast('הסצנה עודכנה בהצלחה', 'success');
+      const oldIndex = state.scenes.findIndex(s => s.id === state.editingSceneId);
+      if (oldIndex !== -1) {
+        const updatedScene = { ...state.scenes[oldIndex], ...sceneData };
+        state.scenes[oldIndex] = updatedScene;
+
+        if (posVal !== '') {
+          const targetNum = parseInt(posVal, 10);
+          const currentSeq = oldIndex + 1;
+          if (!isNaN(targetNum) && targetNum >= 0 && targetNum !== currentSeq) {
+            if (targetNum === 0) {
+              const [removed] = state.scenes.splice(oldIndex, 1);
+              state.scenes.unshift(removed);
+              showToast(`הסצנה עודכנה והועברה לתחילת הספר (#1)`, 'success');
+            } else {
+              const boundedTargetNum = Math.min(targetNum, state.scenes.length);
+              const targetScene = state.scenes[boundedTargetNum - 1];
+              if (targetScene && targetScene.id !== updatedScene.id) {
+                const [removed] = state.scenes.splice(oldIndex, 1);
+                const newTargetIndex = state.scenes.findIndex(s => s.id === targetScene.id);
+                const insertIndex = newTargetIndex + 1;
+                state.scenes.splice(insertIndex, 0, removed);
+                showToast(`הסצנה עודכנה והועברה למיקום #${insertIndex + 1} (מיד אחרי כרטיסיה #${boundedTargetNum})`, 'success');
+              } else {
+                showToast('הסצנה עודכנה בהצלחה', 'success');
+              }
+            }
+          } else {
+            showToast('הסצנה עודכנה בהצלחה', 'success');
+          }
+        } else {
+          showToast('הסצנה עודכנה בהצלחה', 'success');
+        }
       }
     } else {
-      state.scenes.push(sceneData);
-      showToast('סצנה חדשה נוספה לספר', 'success');
+      if (posVal !== '') {
+        const targetNum = parseInt(posVal, 10);
+        if (!isNaN(targetNum) && targetNum === 0) {
+          state.scenes.unshift(sceneData);
+          showToast(`סצנה חדשה נוספה בראש הספר (#1)`, 'success');
+        } else if (!isNaN(targetNum) && targetNum > 0) {
+          const insertIdx = Math.min(targetNum, state.scenes.length);
+          state.scenes.splice(insertIdx, 0, sceneData);
+          showToast(`סצנה חדשה נוספה במיקום #${insertIdx + 1} (אחרי כרטיסיה #${insertIdx})`, 'success');
+        } else {
+          state.scenes.push(sceneData);
+          showToast('סצנה חדשה נוספה לספר', 'success');
+        }
+      } else {
+        state.scenes.push(sceneData);
+        showToast('סצנה חדשה נוספה לספר', 'success');
+      }
     }
 
     saveData();
@@ -1264,8 +1380,11 @@
       });
     });
 
-    // Scene Form Submit
+    // Scene Form Submit & Reposition input feedback
     elements.sceneForm.addEventListener('submit', handleSceneFormSubmit);
+    if (elements.inputScenePosition) {
+      elements.inputScenePosition.addEventListener('input', updateRepositionFeedback);
+    }
 
     // Export Actions
     elements.btnCopyFormatted.addEventListener('click', () => {
