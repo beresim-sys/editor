@@ -115,11 +115,26 @@
       exactPov: 'all',
       location: 'all',
       time: 'all',
-      source: 'all'
+      source: 'all',     // For backward compatibility
+      sources: []        // Array of selected sources (empty = all)
     },
     draggedId: null,
     editingSceneId: null
   };
+
+  /**
+   * Helper to update source filter state consistently
+   */
+  function setSourceFilter(sourcesArray) {
+    state.filters.sources = sourcesArray || [];
+    if (state.filters.sources.length === 0) {
+      state.filters.source = 'all';
+    } else if (state.filters.sources.length === 1) {
+      state.filters.source = state.filters.sources[0];
+    } else {
+      state.filters.source = 'multiple';
+    }
+  }
 
   // --- DOM Elements ---
   const elements = {
@@ -418,8 +433,13 @@
       // Exact POV dropdown filter
       if (exactPov !== 'all' && scene.pov !== exactPov) return false;
 
-      // Source filter
-      if (sourceFilter !== 'all' && scene.source !== sourceFilter) return false;
+      // Source filter (supports multi-selection with Ctrl or single source)
+      if (state.filters.sources && state.filters.sources.length > 0) {
+        const sceneSrc = scene.source ? scene.source.trim() : 'ללא מקור';
+        if (!state.filters.sources.includes(sceneSrc)) return false;
+      } else if (sourceFilter !== 'all' && scene.source !== sourceFilter) {
+        return false;
+      }
 
       // Location filter
       if (locationFilter !== 'all' && scene.location !== locationFilter) return false;
@@ -569,7 +589,7 @@
       ` : ''}
 
       ${scene.source ? `
-        <div class="scene-source-footer clickable-source-tag" title="לחץ כדי לסנן סצנות מתוך מקור זה" style="cursor: pointer;">
+        <div class="scene-source-footer clickable-source-tag" title="לחץ לסינון מקור זה (החזק Ctrl לבחירה מרובה)" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           <span>מקור: <strong>${escapeHtml(scene.source)}</strong></span>
         </div>
@@ -577,10 +597,21 @@
     `;
 
     const sourceTag = card.querySelector('.clickable-source-tag');
-    if (sourceTag) {
+    if (sourceTag && scene.source) {
       sourceTag.addEventListener('click', (e) => {
         e.stopPropagation();
-        state.filters.source = scene.source;
+        const src = scene.source.trim();
+        const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+        if (isMulti) {
+          const current = state.filters.sources || [];
+          if (current.includes(src)) {
+            setSourceFilter(current.filter(s => s !== src));
+          } else {
+            setSourceFilter([...current, src]);
+          }
+        } else {
+          setSourceFilter([src]);
+        }
         renderApp();
       });
     }
@@ -615,8 +646,10 @@
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', this.dataset.id);
 
+    const hasSourceFilter = (state.filters.sources && state.filters.sources.length > 0) || state.filters.source !== 'all';
     const isFiltered = state.filters.search || state.filters.povChar !== 'all' || 
-                       state.filters.exactPov !== 'all' || state.filters.location !== 'all' || state.filters.time !== 'all';
+                       state.filters.exactPov !== 'all' || hasSourceFilter ||
+                       state.filters.location !== 'all' || state.filters.time !== 'all';
     if (isFiltered) {
       showToast('שים לב: הסידור מחדש משפיע על הרצף המלא של הספר', 'info');
     }
@@ -730,18 +763,23 @@
     });
 
     const uniqueSources = Object.keys(sourceCounts).sort();
+    const activeSources = state.filters.sources || [];
+    const isAllActive = activeSources.length === 0;
 
     if (elements.sourceChipsContainer) {
       const sourceChipsHtml = [`
-        <button class="source-chip ${state.filters.source === 'all' ? 'active' : ''}" data-source="all">
+        <button class="source-chip ${isAllActive ? 'active' : ''}" data-source="all" title="הצג את כל המקורות">
           כל המקורות <span class="chip-count">${state.scenes.length}</span>
         </button>
       `];
 
       uniqueSources.forEach(src => {
         const themeClass = getSourceThemeClass(src);
+        const isActive = activeSources.includes(src);
         sourceChipsHtml.push(`
-          <button class="source-chip ${themeClass} ${state.filters.source === src ? 'active' : ''}" data-source="${escapeHtml(src)}">
+          <button class="source-chip ${themeClass} ${isActive ? 'active' : ''}" 
+                  data-source="${escapeHtml(src)}" 
+                  title="${escapeHtml(src)} (לחץ לבחירה, החזק Ctrl לבחירה מרובה)">
             ${escapeHtml(src)} <span class="chip-count">${sourceCounts[src]}</span>
           </button>
         `);
@@ -749,17 +787,53 @@
 
       elements.sourceChipsContainer.innerHTML = sourceChipsHtml.join('');
       elements.sourceChipsContainer.querySelectorAll('.source-chip').forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.filters.source = btn.dataset.source;
+        btn.addEventListener('click', (e) => {
+          const clickedSrc = btn.dataset.source;
+          const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+
+          if (clickedSrc === 'all') {
+            setSourceFilter([]);
+          } else if (isMulti) {
+            // Multi-selection with Ctrl / Cmd / Shift
+            const current = state.filters.sources || [];
+            if (current.includes(clickedSrc)) {
+              setSourceFilter(current.filter(s => s !== clickedSrc));
+            } else {
+              setSourceFilter([...current, clickedSrc]);
+            }
+          } else {
+            // Single selection without Ctrl: toggle off if already the sole selection, else select only it
+            const current = state.filters.sources || [];
+            if (current.length === 1 && current[0] === clickedSrc) {
+              setSourceFilter([]);
+            } else {
+              setSourceFilter([clickedSrc]);
+            }
+          }
+
           renderApp();
+
+          if (isMulti && state.filters.sources.length > 1) {
+            const count = getFilteredScenes().length;
+            showToast(`סינון מרובה פעיל: ${state.filters.sources.join(' + ')} (${count} סצנות)`, 'info');
+          }
         });
       });
     }
 
     if (elements.sourceFilterSelect) {
-      const currentSrc = state.filters.source;
-      elements.sourceFilterSelect.innerHTML = '<option value="all">כל המקורות</option>' +
-        uniqueSources.map(src => `<option value="${escapeHtml(src)}" ${src === currentSrc ? 'selected' : ''}>${escapeHtml(src)} (${sourceCounts[src]})</option>`).join('');
+      let optionsHtml = '<option value="all">כל המקורות</option>';
+      if (activeSources.length > 1) {
+        optionsHtml = `<option value="multiple" selected>מקורות נבחרים (${activeSources.length})</option>` + optionsHtml;
+      }
+      optionsHtml += uniqueSources.map(src => {
+        const isSelected = activeSources.length === 1 && activeSources[0] === src;
+        return `<option value="${escapeHtml(src)}" ${isSelected ? 'selected' : ''}>${escapeHtml(src)} (${sourceCounts[src]})</option>`;
+      }).join('');
+      elements.sourceFilterSelect.innerHTML = optionsHtml;
+      if (activeSources.length === 0) {
+        elements.sourceFilterSelect.value = 'all';
+      }
     }
 
     // 4. Location Dropdown
@@ -781,8 +855,9 @@
 
     elements.totalScenesCount.textContent = total;
     
+    const hasSourceFilter = state.filters.sources && state.filters.sources.length > 0;
     const isFiltered = state.filters.search || state.filters.povChar !== 'all' || 
-                       state.filters.exactPov !== 'all' || state.filters.source !== 'all' ||
+                       state.filters.exactPov !== 'all' || hasSourceFilter ||
                        state.filters.location !== 'all' || state.filters.time !== 'all';
 
     if (isFiltered) {
@@ -791,7 +866,13 @@
       
       let filterDesc = [];
       if (state.filters.search) filterDesc.push(`חיפוש: "${state.filters.search}"`);
-      if (state.filters.source !== 'all') filterDesc.push(`מקור: ${state.filters.source}`);
+      if (hasSourceFilter) {
+        if (state.filters.sources.length === 1) {
+          filterDesc.push(`מקור: ${state.filters.sources[0]}`);
+        } else {
+          filterDesc.push(`מקורות: ${state.filters.sources.join(' + ')}`);
+        }
+      }
       if (state.filters.povChar !== 'all') filterDesc.push(`דמות: ${state.filters.povChar}`);
       if (state.filters.exactPov !== 'all') filterDesc.push(`POV: ${state.filters.exactPov}`);
       if (state.filters.location !== 'all') filterDesc.push(`מיקום: ${state.filters.location}`);
@@ -810,7 +891,7 @@
     state.filters.search = '';
     state.filters.povChar = 'all';
     state.filters.exactPov = 'all';
-    state.filters.source = 'all';
+    setSourceFilter([]);
     state.filters.location = 'all';
     state.filters.time = 'all';
     elements.searchInput.value = '';
@@ -1066,7 +1147,12 @@
 
     if (elements.sourceFilterSelect) {
       elements.sourceFilterSelect.addEventListener('change', (e) => {
-        state.filters.source = e.target.value;
+        const val = e.target.value;
+        if (val === 'all' || val === 'multiple') {
+          setSourceFilter([]);
+        } else {
+          setSourceFilter([val]);
+        }
         renderApp();
       });
     }
@@ -1205,6 +1291,19 @@
 
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeAllModals();
+      if (e.key === 'Control' || e.key === 'Meta' || e.key === 'Shift') {
+        document.body.classList.add('multi-select-mode');
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Control' || e.key === 'Meta' || e.key === 'Shift') {
+        document.body.classList.remove('multi-select-mode');
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      document.body.classList.remove('multi-select-mode');
     });
   }
 

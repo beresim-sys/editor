@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -123,9 +123,10 @@
     <!-- Dedicated Source Quick Buttons Bar -->
     <div class="source-filter-row">
       <div class="source-filter-inner">
-        <div class="source-filter-label">
+        <div class="source-filter-label" title="ניתן לבחור מספר מקורות יחד באמצעות לחיצה עם מקש Ctrl (או Cmd)">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           <span>סינון מהיר לפי מקור:</span>
+          <span class="ctrl-multi-hint">(לבחירה מרובה: Ctrl + לחיצה)</span>
         </div>
         <div class="source-chips-container" id="sourceChipsContainer">
           <!-- Dynamically populated buttons for each source -->
@@ -281,8 +282,8 @@
   <!-- Libraries & Data -->
   <!-- SheetJS for local Excel parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="excel-data.js?v=7"></script>
-  <script src="scenes-data.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="excel-data.js?v=9"></script>
+  <script src="scenes-data.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

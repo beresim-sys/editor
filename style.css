@@ -409,7 +409,34 @@ body {
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
 }
+
+.ctrl-multi-hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-right: 0.35rem;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--primary);
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  transition: all var(--transition-fast);
+}
+
+body.multi-select-mode .ctrl-multi-hint {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 0 0 2px var(--primary-glow);
+  font-weight: 700;
+}
+
+body.multi-select-mode .source-chip {
+  outline: 1px dashed var(--primary-focus, #818cf8);
+}
+
 
 .source-chip:hover {
   background: #ffffff;
