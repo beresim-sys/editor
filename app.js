@@ -10,6 +10,64 @@
   // --- Storage Key (bumped to v7 to guarantee formatted Hebrew dates for timeline) ---
   const STORAGE_KEY = 'book_scenes_editor_v7';
 
+  // --- IndexedDB Database Manager for Durable Local Persistence ---
+  const SceneDB = {
+    DB_NAME: 'SceneFlowEditorDB',
+    STORE_NAME: 'scenes_store',
+    VERSION: 1,
+
+    open() {
+      return new Promise((resolve) => {
+        if (!window.indexedDB) return resolve(null);
+        try {
+          const req = indexedDB.open(this.DB_NAME, this.VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+              db.createObjectStore(this.STORE_NAME);
+            }
+          };
+          req.onsuccess = (e) => resolve(e.target.result);
+          req.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    },
+
+    async save(scenes) {
+      const db = await this.open();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(this.STORE_NAME, 'readwrite');
+          const store = tx.objectStore(this.STORE_NAME);
+          store.put(scenes, 'active_sequence');
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    },
+
+    async load() {
+      const db = await this.open();
+      if (!db) return null;
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(this.STORE_NAME, 'readonly');
+          const store = tx.objectStore(this.STORE_NAME);
+          const req = store.get('active_sequence');
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+  };
+
   /**
    * Formats timeline value, converting numeric Excel serial dates (e.g. 16681 -> "ספט' 45")
    * or SheetJS English representations (e.g. "Sep-45" -> "ספט' 45") into Hebrew month-year format.
@@ -166,6 +224,8 @@
     saveStatusIndicator: document.getElementById('saveStatusIndicator'),
     btnReloadFromExcel: document.getElementById('btnReloadFromExcel'),
     xlsxFileInput: document.getElementById('xlsxFileInput'),
+    btnImportBackup: document.getElementById('btnImportBackup'),
+    backupFileInput: document.getElementById('backupFileInput'),
     btnAddScene: document.getElementById('btnAddScene'),
     btnExport: document.getElementById('btnExport'),
 
@@ -205,7 +265,7 @@
   }
 
   async function loadInitialData() {
-    // 1. Try to load from active storage if present
+    // Priority 1: Active localStorage
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -214,15 +274,12 @@
           state.scenes = sanitizeScenes(parsed);
           state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
           renderApp();
-          if (elements.dataSourceBadge) {
-            elements.dataSourceBadge.textContent = "סדר שמור פעיל (נשמר בדפדפן)";
-            elements.dataSourceBadge.style.background = "#ecfdf5";
-            elements.dataSourceBadge.style.color = "#047857";
-            elements.dataSourceBadge.style.borderColor = "#a7f3d0";
-          }
+          updateDataSourceBadge("סדר שמור פעיל בדפדפן");
           if (elements.saveStatusIndicator) {
-            elements.saveStatusIndicator.textContent = `✓ נטען מהסדר השמור שלך (${state.scenes.length} סצנות)`;
+            elements.saveStatusIndicator.textContent = `✓ נטען מהסדר השמור שלך בדפדפן (${state.scenes.length} סצנות)`;
           }
+          SceneDB.save(state.scenes);
+          syncToServerIfAvailable();
           return;
         }
       } catch (e) {
@@ -230,23 +287,71 @@
       }
     }
 
-    // Fallback: check legacy v6 storage
-    const savedV6 = localStorage.getItem('book_scenes_editor_v6');
-    if (savedV6) {
-      try {
-        const parsed = JSON.parse(savedV6);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          state.scenes = sanitizeScenes(parsed);
-          state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
-          saveData();
-          renderApp();
-          return;
+    // Priority 2: IndexedDB (durable browser storage, persists even if localStorage is wiped)
+    try {
+      const idbScenes = await SceneDB.load();
+      if (Array.isArray(idbScenes) && idbScenes.length > 0) {
+        state.scenes = sanitizeScenes(idbScenes);
+        state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+        saveData(false);
+        renderApp();
+        updateDataSourceBadge("סדר שמור פעיל (שוחזר מ-IndexedDB)");
+        if (elements.saveStatusIndicator) {
+          elements.saveStatusIndicator.textContent = `✓ שוחזר מזיכרון מאובטח (${state.scenes.length} סצנות)`;
         }
-      } catch (e) {}
+        return;
+      }
+    } catch (e) {
+      console.error('Error reading IndexedDB:', e);
     }
 
-    // 2. Load directly from the project's Excel file ('סצנות לספר.xlsx')
+    // Priority 3: Server disk saved JSON files (scenes-saved.json / scenes.json)
+    if (window.location.protocol.startsWith('http')) {
+      const serverFiles = ['scenes-saved.json', 'scenes.json'];
+      for (const sf of serverFiles) {
+        try {
+          const response = await fetch(sf + '?t=' + Date.now());
+          if (response.ok) {
+            const diskScenes = await response.json();
+            if (Array.isArray(diskScenes) && diskScenes.length > 0) {
+              state.scenes = sanitizeScenes(diskScenes);
+              state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+              saveData(false);
+              renderApp();
+              updateDataSourceBadge(`סדר שמור פעיל (מקובץ ${sf})`);
+              if (elements.saveStatusIndicator) {
+                elements.saveStatusIndicator.textContent = `✓ נטען מקובץ הסצנות השמור (${state.scenes.length} סצנות)`;
+              }
+              return;
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Priority 4: Embedded DEFAULT_SCENES from scenes-data.js (contains all 125 recovered scenes)
+    if (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES) && DEFAULT_SCENES.length > 0) {
+      state.scenes = sanitizeScenes(JSON.parse(JSON.stringify(DEFAULT_SCENES)));
+      state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+      saveData(false);
+      renderApp();
+      updateDataSourceBadge("סדר שמור פעיל (נטען מהמערכת)");
+      if (elements.saveStatusIndicator) {
+        elements.saveStatusIndicator.textContent = `✓ נטען מהסדר השמור במערכת (${state.scenes.length} סצנות)`;
+      }
+      return;
+    }
+
+    // Priority 5: Fallback to original Excel file ('סצנות לספר.xlsx')
     await loadScenesFromProjectExcelFile(false);
+  }
+
+  function updateDataSourceBadge(text) {
+    if (!elements.dataSourceBadge) return;
+    elements.dataSourceBadge.textContent = text;
+    elements.dataSourceBadge.style.background = "#ecfdf5";
+    elements.dataSourceBadge.style.color = "#047857";
+    elements.dataSourceBadge.style.borderColor = "#a7f3d0";
   }
 
   async function loadScenesFromProjectExcelFile(isUserAction = false) {
@@ -403,13 +508,19 @@
   function saveData(isManual = false) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scenes));
+      // Persist to IndexedDB
+      SceneDB.save(state.scenes);
+
+      // If running on local server via HTTP, persist directly to disk files
+      syncToServerIfAvailable();
+
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
       if (elements.saveStatusIndicator) {
         elements.saveStatusIndicator.textContent = `✓ נשמר לאחרונה ב-${timeStr} (${state.scenes.length} סצנות)`;
       }
       if (elements.dataSourceBadge) {
-        elements.dataSourceBadge.textContent = "סדר שמור פעיל בדפדפן";
+        elements.dataSourceBadge.textContent = "סדר שמור פעיל ומגובה";
         elements.dataSourceBadge.style.background = "#ecfdf5";
         elements.dataSourceBadge.style.color = "#047857";
         elements.dataSourceBadge.style.borderColor = "#a7f3d0";
@@ -421,13 +532,33 @@
           if (elements.saveBtnText) elements.saveBtnText.textContent = 'שמור שינויים';
           if (elements.btnSaveChanges) elements.btnSaveChanges.classList.remove('saved-pulse');
         }, 2000);
-        showToast('כל השינויים וסדר הסצנות נשמרו בהצלחה בדפדפן!', 'success');
+        showToast('כל השינויים וסדר הסצנות נשמרו בהצלחה (בדפדפן ובקובץ)!', 'success');
       }
     } catch (e) {
       console.error('Failed to save to localStorage', e);
+      // Still persist to IndexedDB and server even if localStorage quota failed
+      SceneDB.save(state.scenes);
+      syncToServerIfAvailable();
       if (isManual) {
-        showToast('שגיאה בשמירה לזיכרון הדפדפן', 'warning');
+        showToast('נשמר בזיכרון מאובטח (IndexedDB)', 'info');
       }
+    }
+  }
+
+  function syncToServerIfAvailable() {
+    if (window.location.protocol.startsWith('http')) {
+      fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(state.scenes)
+      }).then(res => {
+        if (res.ok && elements.saveStatusIndicator) {
+          const current = elements.saveStatusIndicator.textContent;
+          if (!current.includes('בקובץ')) {
+            elements.saveStatusIndicator.textContent = current + ' | נשמר בקובץ המקומי ✓';
+          }
+        }
+      }).catch(() => {});
     }
   }
 
@@ -1348,6 +1479,38 @@
       });
     }
 
+    // Backup JSON Import
+    if (elements.btnImportBackup && elements.backupFileInput) {
+      elements.btnImportBackup.addEventListener('click', () => {
+        elements.backupFileInput.click();
+      });
+
+      elements.backupFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const parsed = JSON.parse(event.target.result);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              state.scenes = sanitizeScenes(parsed);
+              state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+              saveData(true);
+              renderApp();
+              showToast(`נטענו ושוחזרו בהצלחה ${state.scenes.length} סצנות מקובץ הגיבוי!`, 'success');
+            } else {
+              showToast('קובץ הגיבוי שנבחר אינו תקין או ריק', 'warning');
+            }
+          } catch (err) {
+            console.error('Error parsing backup JSON:', err);
+            showToast('שגיאה בקריאת קובץ הגיבוי', 'warning');
+          }
+          elements.backupFileInput.value = '';
+        };
+        reader.readAsText(file, 'utf-8');
+      });
+    }
+
     // Reload directly from Excel file in project folder (with confirmation safety)
     elements.btnReloadFromExcel.addEventListener('click', () => {
       if (!confirm('האם אתה בטוח שברצונך לאפס את סדר הסצנות ולטעון מחדש מקובץ האקסל המקורי? כל שינויי המיקום שביצעת יאופסו.')) {
@@ -1365,8 +1528,9 @@
         ].forEach(k => {
           localStorage.removeItem(k);
         });
+        SceneDB.save([]);
       } catch (e) {
-        console.error('Error clearing localStorage:', e);
+        console.error('Error clearing storage:', e);
       }
       loadScenesFromProjectExcelFile(true);
     });

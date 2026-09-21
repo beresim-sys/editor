@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -51,6 +51,14 @@
             </svg>
             <span>ייצוא הסדר החדש</span>
           </button>
+
+          <button class="btn btn-secondary" id="btnImportBackup" title="טעינת סדר סצנות מקובץ גיבוי (JSON)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m4-8l-4-4m0 0l-4 4m4-4v12"/>
+            </svg>
+            <span>טעינת גיבוי</span>
+          </button>
+          <input type="file" id="backupFileInput" accept=".json" style="display: none;">
 
           <button class="btn btn-secondary" id="btnAddScene" title="הוסף סצנה חדשה ללוח">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -316,8 +324,8 @@
   <!-- Libraries & Data -->
   <!-- SheetJS for local Excel parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="excel-data.js?v=11"></script>
-  <script src="scenes-data.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="excel-data.js?v=13"></script>
+  <script src="scenes-data.js?v=13"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
