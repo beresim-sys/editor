@@ -161,6 +161,9 @@
     viewCompactBtn: document.getElementById('viewCompactBtn'),
 
     // Top action buttons
+    btnSaveChanges: document.getElementById('btnSaveChanges'),
+    saveBtnText: document.getElementById('saveBtnText'),
+    saveStatusIndicator: document.getElementById('saveStatusIndicator'),
     btnReloadFromExcel: document.getElementById('btnReloadFromExcel'),
     xlsxFileInput: document.getElementById('xlsxFileInput'),
     btnAddScene: document.getElementById('btnAddScene'),
@@ -202,40 +205,45 @@
   }
 
   async function loadInitialData() {
-    // 1. Try to load from active v6 storage if healthy
+    // 1. Try to load from active storage if present
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const ids = parsed.map(s => s.id);
-          const hasDuplicates = new Set(ids).size !== ids.length;
-          const hasInvalidIds = parsed.some(s => !s.id || /[\u0590-\u05FF\s\/]/.test(s.id));
-          
-          if (!hasDuplicates && !hasInvalidIds) {
-            state.scenes = sanitizeScenes(parsed);
-            state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
-            renderApp();
-            return;
+          state.scenes = sanitizeScenes(parsed);
+          state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+          renderApp();
+          if (elements.dataSourceBadge) {
+            elements.dataSourceBadge.textContent = "סדר שמור פעיל (נשמר בדפדפן)";
+            elements.dataSourceBadge.style.background = "#ecfdf5";
+            elements.dataSourceBadge.style.color = "#047857";
+            elements.dataSourceBadge.style.borderColor = "#a7f3d0";
           }
-          console.warn('Cached data had duplicate or invalid IDs; clearing corrupt cache and loading clean Excel file.');
+          if (elements.saveStatusIndicator) {
+            elements.saveStatusIndicator.textContent = `✓ נטען מהסדר השמור שלך (${state.scenes.length} סצנות)`;
+          }
+          return;
         }
       } catch (e) {
-        console.error('Error reading localStorage v6:', e);
+        console.error('Error reading localStorage:', e);
       }
     }
 
-    // Clean up all legacy corrupted keys
-    try {
-      [
-        'book_scenes_editor_v6',
-        'book_scenes_editor_v5',
-        'book_scenes_editor_excel_v4',
-        'book_scenes_editor_excel_v3',
-        'book_scenes_editor_file_v2',
-        'book_scenes_editor_data_v1'
-      ].forEach(k => localStorage.removeItem(k));
-    } catch (e) {}
+    // Fallback: check legacy v6 storage
+    const savedV6 = localStorage.getItem('book_scenes_editor_v6');
+    if (savedV6) {
+      try {
+        const parsed = JSON.parse(savedV6);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          state.scenes = sanitizeScenes(parsed);
+          state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
+          saveData();
+          renderApp();
+          return;
+        }
+      } catch (e) {}
+    }
 
     // 2. Load directly from the project's Excel file ('סצנות לספר.xlsx')
     await loadScenesFromProjectExcelFile(false);
@@ -392,11 +400,34 @@
     return false;
   }
 
-  function saveData() {
+  function saveData(isManual = false) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scenes));
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      if (elements.saveStatusIndicator) {
+        elements.saveStatusIndicator.textContent = `✓ נשמר לאחרונה ב-${timeStr} (${state.scenes.length} סצנות)`;
+      }
+      if (elements.dataSourceBadge) {
+        elements.dataSourceBadge.textContent = "סדר שמור פעיל בדפדפן";
+        elements.dataSourceBadge.style.background = "#ecfdf5";
+        elements.dataSourceBadge.style.color = "#047857";
+        elements.dataSourceBadge.style.borderColor = "#a7f3d0";
+      }
+      if (isManual) {
+        if (elements.saveBtnText) elements.saveBtnText.textContent = 'נשמר בהצלחה! ✓';
+        if (elements.btnSaveChanges) elements.btnSaveChanges.classList.add('saved-pulse');
+        setTimeout(() => {
+          if (elements.saveBtnText) elements.saveBtnText.textContent = 'שמור שינויים';
+          if (elements.btnSaveChanges) elements.btnSaveChanges.classList.remove('saved-pulse');
+        }, 2000);
+        showToast('כל השינויים וסדר הסצנות נשמרו בהצלחה בדפדפן!', 'success');
+      }
     } catch (e) {
       console.error('Failed to save to localStorage', e);
+      if (isManual) {
+        showToast('שגיאה בשמירה לזיכרון הדפדפן', 'warning');
+      }
     }
   }
 
@@ -1310,10 +1341,21 @@
       elements.viewCompactBtn.classList.toggle('active', state.viewMode === 'compact');
     }
 
-    // Top action triggers: Reload directly from Excel file in project folder
+    // Top action triggers
+    if (elements.btnSaveChanges) {
+      elements.btnSaveChanges.addEventListener('click', () => {
+        saveData(true);
+      });
+    }
+
+    // Reload directly from Excel file in project folder (with confirmation safety)
     elements.btnReloadFromExcel.addEventListener('click', () => {
+      if (!confirm('האם אתה בטוח שברצונך לאפס את סדר הסצנות ולטעון מחדש מקובץ האקסל המקורי? כל שינויי המיקום שביצעת יאופסו.')) {
+        return;
+      }
       try {
         [
+          STORAGE_KEY,
           'book_scenes_editor_v6',
           'book_scenes_editor_v5',
           'book_scenes_editor_excel_v4',
@@ -1423,6 +1465,10 @@
 
     window.addEventListener('blur', () => {
       document.body.classList.remove('multi-select-mode');
+    });
+
+    window.addEventListener('beforeunload', () => {
+      saveData(false);
     });
   }
 

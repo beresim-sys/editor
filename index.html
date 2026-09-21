@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -38,11 +38,11 @@
           <!-- Hidden file input for manual XLSX selection if needed -->
           <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" style="display: none;">
 
-          <button class="btn btn-primary" id="btnReloadFromExcel" title="קרא מחדש את קובץ 'סצנות לספר.xlsx' מתיקיית הפרויקט">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          <button class="btn btn-save" id="btnSaveChanges" title="שמור את סדר הסצנות והשינויים בדפדפן (נשמר אוטומטית גם בכל פעולה)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
-            <span>טעינה מחדש מקובץ האקסל</span>
+            <span id="saveBtnText">שמור שינויים</span>
           </button>
 
           <button class="btn btn-secondary" id="btnExport" title="ייצוא הסדר החדש או העתקה ללוח">
@@ -57,6 +57,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
             <span>סצנה חדשה</span>
+          </button>
+
+          <button class="btn btn-ghost" id="btnReloadFromExcel" title="איפוס הסדר וטעינה מחדש מקובץ האקסל המקורי">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>איפוס לאקסל</span>
           </button>
         </div>
       </div>
@@ -144,8 +151,9 @@
           <a href="javascript:void(0)" id="clearFiltersBtn" class="clear-filters-link">(נקה סינונים)</a>
         </span>
       </div>
-      <div>
-        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות כדי לסדר מחדש את הרצף • השינויים נשמרים אוטומטית</span>
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <span id="saveStatusIndicator" class="save-status-indicator">✓ השינויים נשמרים אוטומטית בדפדפן</span>
+        <span style="font-size: 0.8rem; color: var(--text-dim);">💡 גרור ושחרר כרטיסיות או ערוך מיקום • הרצף ייזכר תמיד</span>
       </div>
     </div>
 
@@ -308,8 +316,8 @@
   <!-- Libraries & Data -->
   <!-- SheetJS for local Excel parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="excel-data.js?v=10"></script>
-  <script src="scenes-data.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="excel-data.js?v=11"></script>
+  <script src="scenes-data.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

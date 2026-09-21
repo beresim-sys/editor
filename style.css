@@ -187,6 +187,23 @@ body {
   background-color: #047857;
 }
 
+.btn-save {
+  background-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  font-weight: 700;
+}
+
+.btn-save:hover {
+  background-color: #047857;
+  transform: translateY(-1px);
+}
+
+.btn-save.saved-pulse {
+  background-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
 .btn-ghost {
   background-color: transparent;
   color: var(--text-muted);
@@ -564,6 +581,26 @@ body.multi-select-mode .source-chip {
   text-decoration: underline;
   cursor: pointer;
   font-weight: 600;
+}
+
+.save-status-indicator {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all var(--transition-fast);
+}
+
+.save-status-indicator.saving {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
 /* Content Area */
