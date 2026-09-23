@@ -117,4 +117,10 @@ $json = $scenes | ConvertTo-Json -Depth 5
 
 $jsContent = "// scenes-data.js`r`n// Total scenes: $($scenes.Count)`r`nconst DEFAULT_SCENES = $json;`r`n"
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) "scenes-data.js"), $jsContent, [System.Text.Encoding]::UTF8)
-Write-Host "Updated scenes.json, scenes-saved.json, and scenes-data.js!"
+
+$excelBytes = [System.IO.File]::ReadAllBytes($xlsx)
+$b64 = [System.Convert]::ToBase64String($excelBytes)
+$excelDataJs = "// excel-data.js`r`nconst EMBEDDED_EXCEL_B64 = `"$b64`";`r`n"
+[System.IO.File]::WriteAllText((Join-Path (Get-Location) "excel-data.js"), $excelDataJs, [System.Text.Encoding]::UTF8)
+
+Write-Host "Updated scenes.json, scenes-saved.json, scenes-data.js, and excel-data.js!"

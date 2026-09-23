@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v9 to load updated POV column from Excel) ---
-  const STORAGE_KEY = 'book_scenes_editor_v9';
+  // --- Storage Key (bumped to v10 to load dedicated POV box and sync POV from Excel) ---
+  const STORAGE_KEY = 'book_scenes_editor_v10';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -148,6 +148,44 @@
     });
   }
 
+  /**
+   * Merges latest POV and other updated fields from DEFAULT_SCENES into any cached scenes,
+   * preserving the user's custom sequence and any existing edits.
+   */
+  function mergeLatestDefaults(cachedScenes) {
+    if (!Array.isArray(cachedScenes)) return cachedScenes;
+    if (typeof DEFAULT_SCENES === 'undefined' || !Array.isArray(DEFAULT_SCENES)) return cachedScenes;
+
+    const defaultMap = new Map();
+    DEFAULT_SCENES.forEach(s => {
+      if (s && s.id) defaultMap.set(s.id, s);
+    });
+
+    return cachedScenes.map(scene => {
+      const def = defaultMap.get(scene.id);
+      if (def) {
+        // If scene has empty/missing POV but DEFAULT_SCENES has a POV, sync it!
+        if ((!scene.pov || scene.pov.trim() === '') && def.pov && def.pov.trim() !== '') {
+          scene.pov = def.pov.trim();
+        }
+        // Ensure other fields are populated if empty in cached state
+        if ((!scene.revealedInfo || scene.revealedInfo.trim() === '') && def.revealedInfo) {
+          scene.revealedInfo = def.revealedInfo.trim();
+        }
+        if ((!scene.time || scene.time.trim() === '') && def.time) {
+          scene.time = formatTimelineValue(def.time);
+        }
+        if ((!scene.location || scene.location.trim() === '') && def.location) {
+          scene.location = def.location.trim();
+        }
+        if ((!scene.source || scene.source.trim() === '') && def.source) {
+          scene.source = def.source.trim();
+        }
+      }
+      return scene;
+    });
+  }
+
   // Top characters for quick POV filter pills
   const PRIMARY_CHARACTERS = [
     'שרה',
@@ -272,6 +310,7 @@
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           state.scenes = sanitizeScenes(parsed);
+          state.scenes = mergeLatestDefaults(state.scenes);
           state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
           renderApp();
           updateDataSourceBadge("סדר שמור פעיל בדפדפן");
@@ -292,6 +331,7 @@
       const idbScenes = await SceneDB.load();
       if (Array.isArray(idbScenes) && idbScenes.length > 0) {
         state.scenes = sanitizeScenes(idbScenes);
+        state.scenes = mergeLatestDefaults(state.scenes);
         state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
         saveData(false);
         renderApp();
@@ -315,6 +355,7 @@
             const diskScenes = await response.json();
             if (Array.isArray(diskScenes) && diskScenes.length > 0) {
               state.scenes = sanitizeScenes(diskScenes);
+              state.scenes = mergeLatestDefaults(state.scenes);
               state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
               saveData(false);
               renderApp();
@@ -774,6 +815,14 @@
       ${scene.summary ? `
         <div class="scene-summary">${escapeHtml(scene.summary)}</div>
       ` : ''}
+
+      <div class="pov-info-box ${!scene.pov ? 'pov-empty' : ''}">
+        <div class="pov-info-header">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 21v-2a4 4 0 0 0-3-3.87"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>נקודת מבט (POV)</span>
+        </div>
+        <div class="pov-info-body">${scene.pov ? escapeHtml(scene.pov) : '<span class="empty-hint">לא הוגדר</span>'}</div>
+      </div>
 
       ${scene.revealedInfo ? `
         <div class="revealed-info-box">
@@ -1552,6 +1601,7 @@
         try {
           [
             STORAGE_KEY,
+            'book_scenes_editor_v9',
             'book_scenes_editor_v8',
             'book_scenes_editor_v7',
             'book_scenes_editor_v6',
