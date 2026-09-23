@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v7 to guarantee formatted Hebrew dates for timeline) ---
-  const STORAGE_KEY = 'book_scenes_editor_v7';
+  // --- Storage Key (bumped to v8 for updated 130-scenes Excel file) ---
+  const STORAGE_KEY = 'book_scenes_editor_v8';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -359,36 +359,57 @@
       showToast("בודק וטוען את קובץ האקסל 'סצנות לספר.xlsx'...", 'info');
     }
 
-    // Strategy A: Direct fetch of the Excel file from project folder (works on server/localhost/GitHub Pages)
-    const fileUrls = ['סצנות לספר.xlsx', encodeURIComponent('סצנות לספר.xlsx'), 'scenes.xlsx'];
+    // Direct fetch of the Excel file from project folder (works on server/localhost)
+    const fileUrls = [
+      '/api/excel',
+      'סצנות לספר.xlsx',
+      encodeURIComponent('סצנות לספר.xlsx'),
+      'scenes.xlsx'
+    ];
+
+    // If running on remote host (like Vercel), also try local background server at localhost:8765
+    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('localhost') && window.location.hostname !== '127.0.0.1') {
+      fileUrls.push('http://localhost:8765/api/excel');
+    }
+
     let fetched = false;
 
     for (const url of fileUrls) {
       try {
-        const response = await fetch(url + '?t=' + Date.now());
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const response = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         if (response.ok) {
           const buffer = await response.arrayBuffer();
           if (parseAndApplyExcelArrayBuffer(buffer)) {
             fetched = true;
-            if (elements.dataSourceBadge) {
-              elements.dataSourceBadge.textContent = "נטען מקובץ: סצנות לספר.xlsx";
+            updateDataSourceBadge(`נטען מקובץ: סצנות לספר.xlsx (${state.scenes.length} סצנות)`);
+            if (elements.saveStatusIndicator) {
+              elements.saveStatusIndicator.textContent = `✓ נטענו ${state.scenes.length} סצנות ישירות מקובץ האקסל המעודכן`;
             }
-            showToast(`נטענו בהצלחה ${state.scenes.length} סצנות מקובץ האקסל שבתיקייה!`, 'success');
+            if (isUserAction) {
+              showToast(`נטענו בהצלחה ${state.scenes.length} סצנות מקובץ האקסל המעודכן שבתיקייה!`, 'success');
+            }
             return true;
           }
         }
       } catch (err) {
-        // Fetch might be blocked by file:// CORS
+        // Fetch might be blocked by CORS or network timeout
       }
     }
 
-    // Strategy B: If running under file:// and fetch is blocked, load from embedded Excel binary (EMBEDDED_EXCEL_B64)
+    // Strategy B: If running under file:// or offline, load from embedded Excel binary (EMBEDDED_EXCEL_B64)
     if (!fetched && typeof EMBEDDED_EXCEL_B64 !== 'undefined' && typeof XLSX !== 'undefined') {
       try {
         const workbook = XLSX.read(EMBEDDED_EXCEL_B64, { type: 'base64' });
         if (parseWorkbook(workbook)) {
-          if (elements.dataSourceBadge) {
-            elements.dataSourceBadge.textContent = "נטען מקובץ: סצנות לספר.xlsx";
+          updateDataSourceBadge(`נטען מקובץ: סצנות לספר.xlsx (${state.scenes.length} סצנות)`);
+          if (elements.saveStatusIndicator) {
+            elements.saveStatusIndicator.textContent = `✓ נטענו ${state.scenes.length} סצנות מקובץ האקסל של הפרויקט`;
           }
           if (isUserAction) {
             showToast(`נטענו מחדש ${state.scenes.length} סצנות מקובץ המקור!`, 'success');
@@ -400,26 +421,25 @@
       }
     }
 
-    // Strategy C: Fallback to DEFAULT_SCENES
+    // If user clicked but running on Vercel without local server, prompt file picker immediately!
+    if (isUserAction) {
+      showToast("כדי לטעון את הקובץ המעודכן ביותר ישירות מהמחשב שלך, בחר את 'סצנות לספר.xlsx'", 'info');
+      if (elements.xlsxFileInput) {
+        elements.xlsxFileInput.click();
+      }
+      return false;
+    }
+
+    // Strategy C: Fallback to DEFAULT_SCENES on initial load
     if (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) {
       state.scenes = sanitizeScenes(JSON.parse(JSON.stringify(DEFAULT_SCENES)));
       state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
       saveData();
       renderApp();
-      if (elements.dataSourceBadge) {
-        elements.dataSourceBadge.textContent = "נטען מקובץ: סצנות לספר.xlsx";
-      }
+      updateDataSourceBadge(`נטען מקובץ: סצנות לספר.xlsx (${state.scenes.length} סצנות)`);
       return true;
     }
 
-    if (isUserAction) {
-      // If user clicked but file protocol blocked relative fetch, prompt file picker
-      if (window.location.protocol === 'file:') {
-        elements.xlsxFileInput.click();
-      } else {
-        showToast("לא ניתן לגשת לקובץ האקסל ישירות", 'warning');
-      }
-    }
     return false;
   }
 
@@ -472,7 +492,6 @@
 
       const rawId = headerMap.id !== undefined && row[headerMap.id] ? String(row[headerMap.id]).trim() : '';
       const title = headerMap.title !== undefined && row[headerMap.title] ? String(row[headerMap.title]).trim() : '';
-      const pov = headerMap.pov !== undefined && row[headerMap.pov] ? String(row[headerMap.pov]).trim() : '';
       const location = headerMap.location !== undefined && row[headerMap.location] ? String(row[headerMap.location]).trim() : '';
       const time = headerMap.time !== undefined && row[headerMap.time] !== undefined && row[headerMap.time] !== null ? formatTimelineValue(row[headerMap.time]) : '';
       const summary = headerMap.summary !== undefined && row[headerMap.summary] ? String(row[headerMap.summary]).trim() : '';
@@ -480,9 +499,20 @@
       const source = headerMap.source !== undefined && row[headerMap.source] ? String(row[headerMap.source]).trim() : '';
 
       // Skip row if it has no content at all (prevents trailing empty rows from Excel)
-      if (!title && !summary && !pov && !location && !rawId) continue;
+      if (!title && !summary && !location && !rawId) continue;
 
       const id = rawId || `scene_${parsedScenes.length + 1}`;
+
+      // Preserve existing POV from state or DEFAULT_SCENES if not in Excel
+      let pov = (headerMap.pov !== undefined && row[headerMap.pov]) ? String(row[headerMap.pov]).trim() : '';
+      if (!pov) {
+        const existing = state.scenes.find(s => s.id === id) || 
+          (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES) && DEFAULT_SCENES.find(s => s.id === id));
+        if (existing && existing.pov) {
+          pov = existing.pov;
+        }
+      }
+
       parsedScenes.push({
         id,
         title: title || `סצנה ${parsedScenes.length + 1}`,
@@ -1512,42 +1542,56 @@
     }
 
     // Reload directly from Excel file in project folder (with confirmation safety)
-    elements.btnReloadFromExcel.addEventListener('click', () => {
-      if (!confirm('האם אתה בטוח שברצונך לאפס את סדר הסצנות ולטעון מחדש מקובץ האקסל המקורי? כל שינויי המיקום שביצעת יאופסו.')) {
-        return;
-      }
-      try {
-        [
-          STORAGE_KEY,
-          'book_scenes_editor_v6',
-          'book_scenes_editor_v5',
-          'book_scenes_editor_excel_v4',
-          'book_scenes_editor_excel_v3',
-          'book_scenes_editor_file_v2',
-          'book_scenes_editor_data_v1'
-        ].forEach(k => {
-          localStorage.removeItem(k);
-        });
-        SceneDB.save([]);
-      } catch (e) {
-        console.error('Error clearing storage:', e);
-      }
-      loadScenesFromProjectExcelFile(true);
-    });
+    if (elements.btnReloadFromExcel) {
+      elements.btnReloadFromExcel.addEventListener('click', () => {
+        if (!confirm('האם אתה בטוח שברצונך לאפס את סדר הסצנות ולטעון מחדש מקובץ האקסל המקורי? כל שינויי המיקום שביצעת יאופסו.')) {
+          return;
+        }
+        try {
+          [
+            STORAGE_KEY,
+            'book_scenes_editor_v8',
+            'book_scenes_editor_v7',
+            'book_scenes_editor_v6',
+            'book_scenes_editor_v5',
+            'book_scenes_editor_excel_v4',
+            'book_scenes_editor_excel_v3',
+            'book_scenes_editor_file_v2',
+            'book_scenes_editor_data_v1'
+          ].forEach(k => {
+            localStorage.removeItem(k);
+          });
+          SceneDB.save([]);
+        } catch (e) {
+          console.error('Error clearing storage:', e);
+        }
+        loadScenesFromProjectExcelFile(true);
+      });
+    }
 
-    // Manual fallback file picker (if needed under file://)
-    elements.xlsxFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (parseAndApplyExcelArrayBuffer(event.target.result)) {
-            showToast(`נטענו בהצלחה ${state.scenes.length} סצנות מקובץ האקסל שנבחר!`, 'success');
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
+    // Manual fallback file picker (triggered automatically on Vercel or when user selects file)
+    if (elements.xlsxFileInput) {
+      elements.xlsxFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (parseAndApplyExcelArrayBuffer(event.target.result)) {
+              syncToServerIfAvailable();
+              updateDataSourceBadge(`נטען מקובץ: ${file.name} (${state.scenes.length} סצנות)`);
+              if (elements.saveStatusIndicator) {
+                elements.saveStatusIndicator.textContent = `✓ נטענו ${state.scenes.length} סצנות מקובץ ${file.name}`;
+              }
+              showToast(`נטענו בהצלחה ${state.scenes.length} סצנות מקובץ "${file.name}"!`, 'success');
+            } else {
+              showToast('שגיאה בפענוח קובץ האקסל. ודא שהקובץ תקין.', 'warning');
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        }
+        elements.xlsxFileInput.value = '';
+      });
+    }
 
     // Drag-and-drop any .xlsx file directly onto the browser window
     window.addEventListener('dragover', (e) => {
@@ -1564,7 +1608,14 @@
           const reader = new FileReader();
           reader.onload = (event) => {
             if (parseAndApplyExcelArrayBuffer(event.target.result)) {
+              syncToServerIfAvailable();
+              updateDataSourceBadge(`נטען מקובץ: ${file.name} (${state.scenes.length} סצנות)`);
+              if (elements.saveStatusIndicator) {
+                elements.saveStatusIndicator.textContent = `✓ נטענו ${state.scenes.length} סצנות מקובץ ${file.name}`;
+              }
               showToast(`קובץ האקסל "${file.name}" נטען בהצלחה! (${state.scenes.length} סצנות)`, 'success');
+            } else {
+              showToast('שגיאה בפענוח קובץ האקסל שנמסר.', 'warning');
             }
           };
           reader.readAsArrayBuffer(file);

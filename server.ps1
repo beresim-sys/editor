@@ -66,6 +66,39 @@ while ($listener.IsListening) {
         $urlPath = "/index.html"
     }
 
+    # Helper function to read file bytes safely even if open in Excel
+    function ReadBytesShared($filePath) {
+        $fs = New-Object System.IO.FileStream($filePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+        $ms = New-Object System.IO.MemoryStream
+        $fs.CopyTo($ms)
+        $fs.Dispose()
+        $data = $ms.ToArray()
+        $ms.Dispose()
+        return $data
+    }
+
+    # API Endpoint: Serve current project Excel file directly
+    if ($req.HttpMethod -eq "GET" -and ($urlPath -eq "/api/excel" -or $urlPath -like "*excel*" -or $urlPath.EndsWith(".xlsx"))) {
+        $xlsx = Get-ChildItem -Path $root -Filter "*.xlsx" | Select-Object -First 1
+        if ($xlsx) {
+            try {
+                $bytes = ReadBytesShared($xlsx.FullName)
+                $res.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                $res.AddHeader("Content-Disposition", "inline; filename=`"scenes.xlsx`"")
+                $res.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+                $res.ContentLength64 = $bytes.Length
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.StatusCode = 200
+                Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Served Excel file: $($xlsx.Name) ($($bytes.Length) bytes)" -ForegroundColor Green
+            } catch {
+                Write-Host "Error serving Excel file: $_" -ForegroundColor Red
+                $res.StatusCode = 500
+            }
+            $res.Close()
+            continue
+        }
+    }
+
     # API Endpoint: Save scenes directly to disk
     if ($req.HttpMethod -eq "POST" -and $urlPath -eq "/api/save") {
         try {
@@ -99,8 +132,13 @@ while ($listener.IsListening) {
         continue
     }
 
-    $subPath = $urlPath.Substring(1)
+    $subPath = [System.Uri]::UnescapeDataString($urlPath.Substring(1))
     $targetFile = Join-Path $root $subPath
+
+    if (-not (Test-Path -LiteralPath $targetFile -PathType Leaf) -and $subPath.EndsWith(".xlsx")) {
+        $xlsx = Get-ChildItem -Path $root -Filter "*.xlsx" | Select-Object -First 1
+        if ($xlsx) { $targetFile = $xlsx.FullName }
+    }
 
     if (Test-Path -LiteralPath $targetFile -PathType Leaf) {
         $ext = [System.IO.Path]::GetExtension($targetFile).ToLower()
@@ -113,10 +151,14 @@ while ($listener.IsListening) {
             default { $res.ContentType = "application/octet-stream" }
         }
 
-        $bytes = [System.IO.File]::ReadAllBytes($targetFile)
-        $res.ContentLength64 = $bytes.Length
-        $res.OutputStream.Write($bytes, 0, $bytes.Length)
-        $res.StatusCode = 200
+        try {
+            $bytes = ReadBytesShared($targetFile)
+            $res.ContentLength64 = $bytes.Length
+            $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            $res.StatusCode = 200
+        } catch {
+            $res.StatusCode = 500
+        }
     } else {
         $res.StatusCode = 404
     }
