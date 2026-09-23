@@ -20,25 +20,42 @@ $sheetXml = [xml]$sheetReader.ReadToEnd()
 $sheetReader.Dispose()
 $zip.Dispose()
 
-# Load backup for POV lookup
-$povMap = @{}
-$bkFile = Join-Path (Get-Location) "scenes-backup.json"
-if (Test-Path $bkFile) {
-    $bk = Get-Content $bkFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    foreach ($s in $bk) {
-        if ($s.id -and $s.pov) {
-            $povMap[$s.id] = $s.pov
+$w_id = [char]0x05DE + [char]0x05D6
+$w_pov = "pov"
+$w_title = [char]0x05DB + [char]0x05D5
+$w_time = [char]0x05D6 + [char]0x05DE
+$w_loc = [char]0x05DE + [char]0x05D9 + [char]0x05E7
+$w_sum = [char]0x05EA + [char]0x05E7
+$w_rev = [char]0x05E0 + [char]0x05D7
+$w_src = [char]0x05DE + [char]0x05E7 + [char]0x05D5 + [char]0x05E8
+
+$row1 = $sheetXml.SelectSingleNode("//d:sheetData/d:row[1]", $ns)
+$colMap = @{}
+foreach ($c in $row1.SelectNodes("d:c", $ns)) {
+    $colLetter = ($c.r -replace '\d+', '')
+    $headerVal = ""
+    $vNode = $c.SelectSingleNode("d:v", $ns)
+    if ($vNode) {
+        $rawVal = $vNode.InnerText
+        if ($c.t -eq "s") {
+            $idx = [int]$rawVal
+            if ($idx -ge 0 -and $idx -lt $strings.Count) {
+                $headerVal = $strings[$idx].Trim()
+            }
+        } else {
+            $headerVal = $rawVal.Trim()
         }
     }
-}
-
-# Load new POV defaults if present
-$newPovsFile = Join-Path (Get-Location) "new_povs.json"
-if (Test-Path $newPovsFile) {
-    $newPovs = Get-Content $newPovsFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    foreach ($prop in $newPovs.PSObject.Properties) {
-        $povMap[$prop.Name] = $prop.Value
-    }
+    
+    $h = $headerVal.ToLower()
+    if ($h.Contains($w_id) -or $h -eq "id") { $colMap['id'] = $colLetter }
+    elseif ($h.Contains($w_pov) -or $h.Contains([char]0x05DE + [char]0x05D1 + [char]0x05D8)) { $colMap['pov'] = $colLetter }
+    elseif ($h.Contains($w_title) -or $h -eq "title") { $colMap['title'] = $colLetter }
+    elseif ($h.Contains($w_time) -or $h -eq "time") { $colMap['time'] = $colLetter }
+    elseif ($h.Contains($w_loc) -or $h -eq "location") { $colMap['location'] = $colLetter }
+    elseif ($h.Contains($w_sum) -or $h -eq "summary") { $colMap['summary'] = $colLetter }
+    elseif ($h.Contains($w_rev) -or $h -eq "revealed") { $colMap['revealed'] = $colLetter }
+    elseif ($h.Contains($w_src) -or $h -eq "source") { $colMap['source'] = $colLetter }
 }
 
 $rows = $sheetXml.SelectNodes("//d:sheetData/d:row", $ns)
@@ -65,24 +82,20 @@ for ($i = 1; $i -lt $rows.Count; $i++) {
         $rowCells[$colLetter] = $val
     }
 
-    $id = $rowCells['A']
-    $title = $rowCells['B']
-    $time = $rowCells['C']
-    $location = $rowCells['D']
-    $summary = $rowCells['E']
-    $revealed = $rowCells['F']
-    $source = $rowCells['G']
+    $id = if ($colMap.ContainsKey('id')) { $rowCells[$colMap['id']] } else { $rowCells['A'] }
+    $pov = if ($colMap.ContainsKey('pov') -and $rowCells.ContainsKey($colMap['pov'])) { $rowCells[$colMap['pov']].Trim() } else { "" }
+    $title = if ($colMap.ContainsKey('title')) { $rowCells[$colMap['title']] } else { $rowCells['C'] }
+    $time = if ($colMap.ContainsKey('time')) { $rowCells[$colMap['time']] } else { $rowCells['D'] }
+    $location = if ($colMap.ContainsKey('location')) { $rowCells[$colMap['location']] } else { $rowCells['E'] }
+    $summary = if ($colMap.ContainsKey('summary')) { $rowCells[$colMap['summary']] } else { $rowCells['F'] }
+    $revealed = if ($colMap.ContainsKey('revealed')) { $rowCells[$colMap['revealed']] } else { $rowCells['G'] }
+    $source = if ($colMap.ContainsKey('source')) { $rowCells[$colMap['source']] } else { $rowCells['H'] }
 
     if (-not $id -and -not $title -and -not $summary) {
         continue
     }
 
     $cleanId = if ($id) { $id.Trim() } else { "scene_$i" }
-    
-    $pov = ""
-    if ($povMap.ContainsKey($cleanId)) {
-        $pov = $povMap[$cleanId]
-    }
 
     $sceneObj = [ordered]@{
         id = $cleanId

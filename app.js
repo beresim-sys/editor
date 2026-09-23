@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v8 for updated 130-scenes Excel file) ---
-  const STORAGE_KEY = 'book_scenes_editor_v8';
+  // --- Storage Key (bumped to v9 to load updated POV column from Excel) ---
+  const STORAGE_KEY = 'book_scenes_editor_v9';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -503,9 +503,11 @@
 
       const id = rawId || `scene_${parsedScenes.length + 1}`;
 
-      // Preserve existing POV from state or DEFAULT_SCENES if not in Excel
-      let pov = (headerMap.pov !== undefined && row[headerMap.pov]) ? String(row[headerMap.pov]).trim() : '';
-      if (!pov) {
+      // Take POV directly from Excel cell if POV column exists in the table
+      let pov = '';
+      if (headerMap.pov !== undefined) {
+        pov = (row[headerMap.pov] !== undefined && row[headerMap.pov] !== null) ? String(row[headerMap.pov]).trim() : '';
+      } else {
         const existing = state.scenes.find(s => s.id === id) || 
           (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES) && DEFAULT_SCENES.find(s => s.id === id));
         if (existing && existing.pov) {
