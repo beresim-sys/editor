@@ -951,6 +951,7 @@ body.multi-select-mode .source-chip {
 .pov-malka { background: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
 .pov-louisa { background: #fdf4ff; color: #a21caf; border-color: #f5d0fe; }
 .pov-souzette { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
+.pov-closed-pill { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 .pov-generic { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
 
 .location-pill {
@@ -1032,6 +1033,27 @@ body.multi-select-mode .source-chip {
   font-weight: normal;
   font-size: 0.72rem;
   font-style: italic;
+}
+
+/* Red styling when POV is "סגור" */
+.pov-info-box.pov-closed {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #fca5a5;
+  border-right: 3px solid #ef4444;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.08);
+}
+
+.pov-info-box.pov-closed .pov-info-header {
+  color: #dc2626;
+}
+
+.pov-info-box.pov-closed .pov-info-header svg {
+  color: #ef4444;
+}
+
+.pov-info-box.pov-closed .pov-info-body {
+  color: #b91c1c;
+  font-weight: 700;
 }
 
 /* Revealed Information Section */

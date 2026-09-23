@@ -725,6 +725,7 @@
 
   function getPovStyleClass(povText) {
     if (!povText) return 'pov-generic';
+    if (povText.includes('סגור')) return 'pov-closed-pill';
     if (povText.includes('שרה')) return 'pov-shara';
     if (povText.includes('רפאל שאול')) return 'pov-raphael-shaul';
     if (povText.includes('רפאל אלטרס')) return 'pov-raphael-altras';
@@ -763,6 +764,8 @@
       : '';
 
     const povClass = getPovStyleClass(scene.pov);
+    const isClosedPov = scene.pov && scene.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור';
+    const povBoxClass = isClosedPov ? 'pov-closed' : (!scene.pov ? 'pov-empty' : '');
 
     card.innerHTML = `
       ${timelineNodeHtml}
@@ -816,7 +819,7 @@
         <div class="scene-summary">${escapeHtml(scene.summary)}</div>
       ` : ''}
 
-      <div class="pov-info-box ${!scene.pov ? 'pov-empty' : ''}">
+      <div class="pov-info-box ${povBoxClass}">
         <div class="pov-info-header">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 21v-2a4 4 0 0 0-3-3.87"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>נקודת מבט (POV)</span>
