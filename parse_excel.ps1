@@ -49,7 +49,7 @@ foreach ($c in $row1.SelectNodes("d:c", $ns)) {
     
     $h = $headerVal.ToLower()
     if ($h.Contains($w_id) -or $h -eq "id") { $colMap['id'] = $colLetter }
-    elseif ($h.Contains($w_pov) -or $h.Contains([char]0x05DE + [char]0x05D1 + [char]0x05D8)) { $colMap['pov'] = $colLetter }
+    elseif ($h.Contains($w_pov) -or $h.Contains([char]0x05DE + [char]0x05D1 + [char]0x05D8) -or $h.Contains("סטטוס") -or $h -eq "status") { $colMap['pov'] = $colLetter }
     elseif ($h.Contains($w_title) -or $h -eq "title") { $colMap['title'] = $colLetter }
     elseif ($h.Contains($w_time) -or $h -eq "time") { $colMap['time'] = $colLetter }
     elseif ($h.Contains($w_loc) -or $h -eq "location") { $colMap['location'] = $colLetter }

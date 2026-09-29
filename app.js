@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v10 to load dedicated POV box and sync POV from Excel) ---
-  const STORAGE_KEY = 'book_scenes_editor_v10';
+  // --- Storage Key (bumped to v11 for Status box states) ---
+  const STORAGE_KEY = 'book_scenes_editor_v11';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -511,7 +511,7 @@
       const h = headerName.toLowerCase();
       if (h.includes('מזהה') || h.includes('קוד') || h.includes('מספר') || h === 'id' || h.includes('scene_id')) return 'id';
       if (h.includes('כותרת') || h.includes('שם סצנה') || h === 'title') return 'title';
-      if (h.includes('מבט') || h.includes('דמות') || h === 'pov') return 'pov';
+      if (h.includes('מבט') || h.includes('דמות') || h === 'pov' || h.includes('סטטוס') || h.includes('status')) return 'pov';
       if (h.includes('מקום') || h.includes('מיקום') || h.includes('אתר') || h === 'location') return 'location';
       if (h.includes('זמן') || h.includes('תאריך') || h === 'time') return 'time';
       if (h.includes('תקציר') || h.includes('עלילה') || h === 'summary') return 'summary';
@@ -668,8 +668,16 @@
         if (!scene.pov || !scene.pov.includes(povChar)) return false;
       }
 
-      // Exact POV dropdown filter
-      if (exactPov !== 'all' && scene.pov !== exactPov) return false;
+      // Status dropdown filter
+      if (exactPov === 'סגור') {
+        const isClosed = Boolean(scene.pov && scene.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור');
+        if (!isClosed) return false;
+      } else if (exactPov === 'empty' || exactPov === 'ריק') {
+        const isClosed = Boolean(scene.pov && scene.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור');
+        if (isClosed) return false;
+      } else if (exactPov !== 'all' && scene.pov !== exactPov) {
+        return false;
+      }
 
       // Source filter (supports multi-selection with Ctrl or single source)
       if (state.filters.sources && state.filters.sources.length > 0) {
@@ -763,9 +771,8 @@
       ? `<div class="timeline-node" title="סצנה #${sequenceNum}">${sequenceNum}</div>` 
       : '';
 
-    const povClass = getPovStyleClass(scene.pov);
-    const isClosedPov = scene.pov && scene.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור';
-    const povBoxClass = isClosedPov ? 'pov-closed' : (!scene.pov ? 'pov-empty' : '');
+    const isClosedPov = Boolean(scene.pov && scene.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור');
+    const statusBoxClass = isClosedPov ? 'status-closed pov-closed' : 'status-empty pov-empty';
 
     card.innerHTML = `
       ${timelineNodeHtml}
@@ -796,10 +803,10 @@
       <h2 class="scene-title">${escapeHtml(scene.title || 'סצנה ללא כותרת')}</h2>
 
       <div class="scene-meta-row">
-        ${scene.pov ? `
-          <span class="meta-pill pov-pill ${povClass}" title="נקודת מבט (POV)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            ${escapeHtml(scene.pov)}
+        ${isClosedPov ? `
+          <span class="meta-pill pov-closed-pill status-pill" title="סטטוס סגור">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            סגור
           </span>` : ''}
 
         ${scene.location ? `
@@ -819,12 +826,12 @@
         <div class="scene-summary">${escapeHtml(scene.summary)}</div>
       ` : ''}
 
-      <div class="pov-info-box ${povBoxClass}">
-        <div class="pov-info-header">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 21v-2a4 4 0 0 0-3-3.87"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>נקודת מבט (POV)</span>
+      <div class="status-info-box pov-info-box ${statusBoxClass}">
+        <div class="status-info-header pov-info-header">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>סטטוס</span>
         </div>
-        <div class="pov-info-body">${scene.pov ? escapeHtml(scene.pov) : '<span class="empty-hint">לא הוגדר</span>'}</div>
+        <div class="status-info-body pov-info-body">${isClosedPov ? 'סגור' : '<span class="status-empty-text">ריק</span>'}</div>
       </div>
 
       ${scene.revealedInfo ? `
@@ -996,12 +1003,16 @@
       });
     });
 
-    // 2. Exact POV Dropdown
+    // 2. Status Dropdown Filter
     if (elements.povFilterSelect) {
       const currentExact = state.filters.exactPov;
-      const allPovs = Array.from(new Set(state.scenes.map(s => s.pov).filter(Boolean))).sort();
-      elements.povFilterSelect.innerHTML = '<option value="all">כל הרכבי ה-POV</option>' +
-        allPovs.map(p => `<option value="${escapeHtml(p)}" ${p === currentExact ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
+      const countClosed = state.scenes.filter(s => s.pov && s.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור').length;
+      const countEmpty = state.scenes.length - countClosed;
+      elements.povFilterSelect.innerHTML = `
+        <option value="all" ${currentExact === 'all' ? 'selected' : ''}>כל הסטטוסים (${state.scenes.length})</option>
+        <option value="סגור" ${currentExact === 'סגור' ? 'selected' : ''}>סגור (${countClosed})</option>
+        <option value="empty" ${currentExact === 'empty' ? 'selected' : ''}>ריק (${countEmpty})</option>
+      `;
     }
 
     // 3. Source Filter Buttons & Dropdown
@@ -1604,6 +1615,7 @@
         try {
           [
             STORAGE_KEY,
+            'book_scenes_editor_v10',
             'book_scenes_editor_v9',
             'book_scenes_editor_v8',
             'book_scenes_editor_v7',
