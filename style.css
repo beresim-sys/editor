@@ -976,83 +976,43 @@ body.multi-select-mode .source-chip {
   white-space: pre-line;
 }
 
-/* Status Box Section (Replaces POV box: two states - empty & closed red) */
-.status-info-box,
+/* POV Box Section (Dedicated panel parallel to revealed-info-box) */
 .pov-info-box {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #c7d2fe;
+  border-right: 3px solid #6366f1;
   border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.05);
   padding: 0.35rem 0.55rem;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  transition: all var(--transition-fast);
 }
 
-.status-info-box .status-info-header,
-.status-info-box .pov-info-header,
-.pov-info-box .status-info-header,
-.pov-info-box .pov-info-header {
+.pov-info-header {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   font-size: 0.68rem;
   font-weight: 700;
+  color: #4338ca;
   text-transform: uppercase;
 }
 
-.status-info-box .status-info-header svg,
-.status-info-box .pov-info-header svg,
-.pov-info-box .status-info-header svg,
-.pov-info-box .pov-info-header svg {
+.pov-info-header svg {
   width: 12px;
   height: 12px;
+  color: #6366f1;
   flex-shrink: 0;
 }
 
-.status-info-box .status-info-body,
-.status-info-box .pov-info-body,
-.pov-info-box .status-info-body,
-.pov-info-box .pov-info-body {
+.pov-info-body {
   font-size: 0.78rem;
+  color: #1e1b4b;
   line-height: 1.35;
+  font-weight: 600;
 }
 
-/* State 1: "סגור" - Red Box */
-.status-info-box.status-closed,
-.status-info-box.pov-closed,
-.pov-info-box.status-closed,
-.pov-info-box.pov-closed {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #fca5a5;
-  border-right: 3px solid #ef4444;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.08);
-}
-
-.status-info-box.status-closed .status-info-header,
-.status-info-box.status-closed .pov-info-header,
-.pov-info-box.pov-closed .status-info-header,
-.pov-info-box.pov-closed .pov-info-header {
-  color: #dc2626;
-}
-
-.status-info-box.status-closed .status-info-header svg,
-.status-info-box.status-closed .pov-info-header svg,
-.pov-info-box.pov-closed .status-info-header svg,
-.pov-info-box.pov-closed .pov-info-header svg {
-  color: #ef4444;
-}
-
-.status-info-box.status-closed .status-info-body,
-.status-info-box.status-closed .pov-info-body,
-.pov-info-box.pov-closed .status-info-body,
-.pov-info-box.pov-closed .pov-info-body {
-  color: #b91c1c;
-  font-weight: 700;
-}
-
-/* State 2: מצב ריק - Neutral Empty Box */
-.status-info-box.status-empty,
-.status-info-box.pov-empty,
-.pov-info-box.status-empty,
 .pov-info-box.pov-empty {
   background: rgba(248, 250, 252, 0.85);
   border: 1px dashed #cbd5e1;
@@ -1060,28 +1020,40 @@ body.multi-select-mode .source-chip {
   box-shadow: none;
 }
 
-.status-info-box.status-empty .status-info-header,
-.status-info-box.status-empty .pov-info-header,
-.pov-info-box.status-empty .status-info-header,
-.pov-info-box.status-empty .pov-info-header {
+.pov-info-box.pov-empty .pov-info-header {
   color: #64748b;
 }
 
-.status-info-box.status-empty .status-info-header svg,
-.status-info-box.status-empty .pov-info-header svg,
-.pov-info-box.status-empty .status-info-header svg,
-.pov-info-box.pov-empty .status-info-header svg {
+.pov-info-box.pov-empty .pov-info-header svg {
   color: #94a3b8;
 }
 
-.status-info-box.status-empty .status-info-body,
-.status-info-box.status-empty .pov-info-body,
-.pov-info-box.status-empty .status-info-body,
 .pov-info-box.pov-empty .pov-info-body {
   color: #94a3b8;
-  font-weight: 500;
-  font-size: 0.74rem;
+  font-weight: normal;
+  font-size: 0.72rem;
   font-style: italic;
+}
+
+/* Red styling when POV is "סגור" */
+.pov-info-box.pov-closed {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #fca5a5;
+  border-right: 3px solid #ef4444;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.08);
+}
+
+.pov-info-box.pov-closed .pov-info-header {
+  color: #dc2626;
+}
+
+.pov-info-box.pov-closed .pov-info-header svg {
+  color: #ef4444;
+}
+
+.pov-info-box.pov-closed .pov-info-body {
+  color: #b91c1c;
+  font-weight: 700;
 }
 
 /* Revealed Information Section */
@@ -1191,7 +1163,6 @@ body.multi-select-mode .source-chip {
   display: none;
 }
 
-.scenes-container.compact-view .status-info-box,
 .scenes-container.compact-view .pov-info-box {
   display: none;
 }
