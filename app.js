@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v10 to load dedicated POV box and sync POV from Excel) ---
-  const STORAGE_KEY = 'book_scenes_editor_v10';
+  // --- Storage Key (bumped to v12 for clean restore) ---
+  const STORAGE_KEY = 'book_scenes_editor_v12';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -988,13 +988,15 @@
       }
     });
 
-    elements.povChipsContainer.innerHTML = povChipsHtml.join('');
-    elements.povChipsContainer.querySelectorAll('.pov-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.filters.povChar = btn.dataset.char;
-        renderApp();
+    if (elements.povChipsContainer) {
+      elements.povChipsContainer.innerHTML = povChipsHtml.join('');
+      elements.povChipsContainer.querySelectorAll('.pov-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.filters.povChar = btn.dataset.char;
+          renderApp();
+        });
       });
-    });
+    }
 
     // 2. Exact POV Dropdown
     if (elements.povFilterSelect) {
@@ -1604,6 +1606,8 @@
         try {
           [
             STORAGE_KEY,
+            'book_scenes_editor_v11',
+            'book_scenes_editor_v10',
             'book_scenes_editor_v9',
             'book_scenes_editor_v8',
             'book_scenes_editor_v7',
