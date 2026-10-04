@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -265,6 +265,13 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary btn-modal-cancel">ביטול</button>
+          <button type="button" class="btn btn-secondary btn-duplicate-modal" id="btnDuplicateModal" title="שכפל כרטיסיה זו כסצנה חדשה מיד אחריה ברצף">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor">
+              <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/>
+            </svg>
+            <span>שכפל כרטיסיה</span>
+          </button>
           <button type="submit" class="btn btn-primary">שמור שינויים</button>
         </div>
       </form>
@@ -324,8 +331,8 @@
   <!-- Libraries & Data -->
   <!-- SheetJS for local Excel parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="excel-data.js?v=20"></script>
-  <script src="scenes-data.js?v=20"></script>
-  <script src="app.js?v=20"></script>
+  <script src="excel-data.js?v=21"></script>
+  <script src="scenes-data.js?v=21"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>

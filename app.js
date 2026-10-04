@@ -282,6 +282,7 @@
     inputScenePosition: document.getElementById('inputScenePosition'),
     modalCurrentSeqTag: document.getElementById('modalCurrentSeqTag'),
     repositionFeedback: document.getElementById('repositionFeedback'),
+    btnDuplicateModal: document.getElementById('btnDuplicateModal'),
 
     // Export Modal
     exportModal: document.getElementById('exportModal'),
@@ -784,6 +785,9 @@
           <button class="card-btn move-down-btn" data-id="${scene.id}" title="הזז אחורה (למטה)">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
+          <button class="card-btn duplicate-btn duplicate-scene-btn" data-id="${scene.id}" title="שכפל כרטיסיה">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
+          </button>
           <button class="card-btn edit-scene-btn" data-id="${scene.id}" title="ערוך סצנה">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
           </button>
@@ -865,6 +869,10 @@
       });
     }
 
+    const dupBtn = card.querySelector('.duplicate-scene-btn');
+    if (dupBtn) {
+      dupBtn.addEventListener('click', (e) => { e.stopPropagation(); duplicateScene(scene.id); });
+    }
     card.querySelector('.edit-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditModal(scene.id); });
     card.querySelector('.delete-scene-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteScene(scene.id); });
     card.querySelector('.move-up-btn').addEventListener('click', (e) => { e.stopPropagation(); moveSceneRelative(scene.id, -1); });
@@ -1170,6 +1178,9 @@
       elements.repositionFeedback.textContent = '';
       elements.repositionFeedback.className = 'reposition-feedback';
     }
+    if (elements.btnDuplicateModal) {
+      elements.btnDuplicateModal.style.display = 'none';
+    }
     
     openModal(elements.sceneModal);
   }
@@ -1247,6 +1258,9 @@
     if (elements.repositionFeedback) {
       elements.repositionFeedback.textContent = '';
       elements.repositionFeedback.className = 'reposition-feedback';
+    }
+    if (elements.btnDuplicateModal) {
+      elements.btnDuplicateModal.style.display = 'inline-flex';
     }
 
     openModal(elements.sceneModal);
@@ -1345,6 +1359,57 @@
       renderApp();
       showToast('הסצנה נמחקה', 'info');
     }
+  }
+
+  function duplicateScene(sceneId, overrideData = null) {
+    const originalIndex = state.scenes.findIndex(s => s.id === sceneId);
+    if (originalIndex === -1) return;
+
+    const originalScene = state.scenes[originalIndex];
+
+    // Generate unique ID for the duplicated card
+    let baseId = originalScene.id ? `${originalScene.id}_copy` : `scene_${Date.now()}`;
+    let newId = baseId;
+    let counter = 1;
+    while (state.scenes.some(s => s.id === newId)) {
+      newId = `${baseId}_${counter++}`;
+    }
+
+    const baseTitle = (overrideData && overrideData.title)
+      ? overrideData.title
+      : `${originalScene.title || 'סצנה'} (עותק)`;
+
+    const newScene = {
+      ...originalScene,
+      ...(overrideData || {}),
+      id: newId,
+      title: baseTitle
+    };
+
+    // Insert immediately after the original scene
+    const insertIndex = originalIndex + 1;
+    state.scenes.splice(insertIndex, 0, newScene);
+
+    // Persist changes to storage
+    saveData();
+
+    // Re-render
+    renderApp();
+
+    const newSeqNum = insertIndex + 1;
+    showToast(`הכרטיסיה "${originalScene.title}" שוכפלה בהצלחה (מיקום #${newSeqNum})`, 'success');
+
+    // Smooth scroll to the newly created card and pulse highlight it
+    setTimeout(() => {
+      const newCard = elements.scenesContainer.querySelector(`.scene-card[data-id="${newId}"]`);
+      if (newCard) {
+        newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        newCard.classList.add('scene-card-highlight');
+        setTimeout(() => {
+          newCard.classList.remove('scene-card-highlight');
+        }, 2200);
+      }
+    }, 150);
   }
 
   // ==========================================================================
@@ -1700,6 +1765,24 @@
     elements.sceneForm.addEventListener('submit', handleSceneFormSubmit);
     if (elements.inputScenePosition) {
       elements.inputScenePosition.addEventListener('input', updateRepositionFeedback);
+    }
+    if (elements.btnDuplicateModal) {
+      elements.btnDuplicateModal.addEventListener('click', () => {
+        if (!state.editingSceneId) return;
+        const currentId = state.editingSceneId;
+        const currentTitle = elements.inputSceneTitle.value.trim();
+        const duplicateData = {
+          title: currentTitle ? `${currentTitle} (עותק)` : undefined,
+          pov: elements.inputScenePov.value.trim(),
+          location: elements.inputSceneLocation.value.trim(),
+          time: formatTimelineValue(elements.inputSceneTime.value),
+          summary: elements.inputSceneSummary.value.trim(),
+          revealedInfo: elements.inputSceneRevealed.value.trim(),
+          source: elements.inputSceneSource.value.trim()
+        };
+        closeAllModals();
+        duplicateScene(currentId, duplicateData);
+      });
     }
 
     // Export Actions
