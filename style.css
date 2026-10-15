@@ -1061,6 +1061,91 @@ body.multi-select-mode .source-chip {
   font-weight: 700;
 }
 
+/* Status: "לכתוב את הסצנה" - Full Red Background with Bold Black Text */
+.pov-info-box.status-write-scene {
+  background: #ef4444;
+  border: 1px solid #dc2626;
+  border-right: 4px solid #991b1b;
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25);
+}
+
+.pov-info-box.status-write-scene .pov-info-header {
+  color: #000000;
+  font-weight: 900;
+}
+
+.pov-info-box.status-write-scene .pov-info-header svg {
+  color: #000000;
+  stroke-width: 2.5;
+}
+
+.pov-info-box.status-write-scene .pov-info-body {
+  color: #000000;
+  font-weight: 900;
+  font-size: 0.84rem;
+  letter-spacing: 0.2px;
+}
+
+/* Quick Status Selector in Edit Modal */
+.status-quick-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.quick-status-btn {
+  font-size: 0.76rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.quick-status-btn:hover {
+  border-color: var(--border-color);
+  color: var(--text-main);
+  background: var(--bg-subtle);
+}
+
+.quick-status-btn.status-btn-write {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.quick-status-btn.status-btn-write:hover {
+  background: #ef4444;
+  color: #000000;
+  border-color: #dc2626;
+  font-weight: 800;
+}
+
+.quick-status-btn.status-btn-closed {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.quick-status-btn.status-btn-closed:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.quick-status-btn.status-btn-clear:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 /* Revealed Information Section */
 .revealed-info-box {
   background: rgba(255, 255, 255, 0.92);

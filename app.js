@@ -726,6 +726,7 @@
 
   function getPovStyleClass(povText) {
     if (!povText) return 'pov-generic';
+    if (povText.includes('לכתוב')) return 'status-write-scene-pill';
     if (povText.includes('סגור')) return 'pov-closed-pill';
     if (povText.includes('שרה')) return 'pov-shara';
     if (povText.includes('רפאל שאול')) return 'pov-raphael-shaul';
@@ -765,8 +766,17 @@
       : '';
 
     const povClass = getPovStyleClass(scene.pov);
-    const isClosedPov = scene.pov && scene.pov.trim().replace(/^["']|["']$/g, '').trim() === 'סגור';
-    const povBoxClass = isClosedPov ? 'pov-closed' : (!scene.pov ? 'pov-empty' : '');
+    const cleanPov = scene.pov ? scene.pov.trim().replace(/^["']|["']$/g, '').trim() : '';
+    const isWriteScene = cleanPov.includes('לכתוב');
+    const isClosedPov = cleanPov === 'סגור';
+    let povBoxClass = '';
+    if (isWriteScene) {
+      povBoxClass = 'status-write-scene';
+    } else if (isClosedPov) {
+      povBoxClass = 'pov-closed';
+    } else if (!cleanPov) {
+      povBoxClass = 'pov-empty';
+    }
 
     card.innerHTML = `
       ${timelineNodeHtml}
@@ -1009,7 +1019,9 @@
     // 2. Exact POV Dropdown
     if (elements.povFilterSelect) {
       const currentExact = state.filters.exactPov;
-      const allPovs = Array.from(new Set(state.scenes.map(s => s.pov).filter(Boolean))).sort();
+      const defaultStatuses = ['לכתוב את הסצנה', 'סגור'];
+      const sceneStatuses = state.scenes.map(s => s.pov).filter(Boolean);
+      const allPovs = Array.from(new Set([...defaultStatuses, ...sceneStatuses])).sort();
       elements.povFilterSelect.innerHTML = '<option value="all">כל הסטטוסים</option>' +
         allPovs.map(p => `<option value="${escapeHtml(p)}" ${p === currentExact ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
     }
@@ -1766,6 +1778,14 @@
     if (elements.inputScenePosition) {
       elements.inputScenePosition.addEventListener('input', updateRepositionFeedback);
     }
+    document.querySelectorAll('.quick-status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (elements.inputScenePov) {
+          elements.inputScenePov.value = btn.dataset.status || '';
+          elements.inputScenePov.focus();
+        }
+      });
+    });
     if (elements.btnDuplicateModal) {
       elements.btnDuplicateModal.addEventListener('click', () => {
         if (!state.editingSceneId) return;
