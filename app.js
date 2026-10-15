@@ -512,7 +512,7 @@
       const h = headerName.toLowerCase();
       if (h.includes('מזהה') || h.includes('קוד') || h.includes('מספר') || h === 'id' || h.includes('scene_id')) return 'id';
       if (h.includes('כותרת') || h.includes('שם סצנה') || h === 'title') return 'title';
-      if (h.includes('מבט') || h.includes('דמות') || h === 'pov') return 'pov';
+      if (h.includes('מבט') || h.includes('דמות') || h === 'pov' || h.includes('סטטוס') || h === 'status') return 'pov';
       if (h.includes('מקום') || h.includes('מיקום') || h.includes('אתר') || h === 'location') return 'location';
       if (h.includes('זמן') || h.includes('תאריך') || h === 'time') return 'time';
       if (h.includes('תקציר') || h.includes('עלילה') || h === 'summary') return 'summary';
@@ -825,10 +825,10 @@
 
       <div class="pov-info-box ${povBoxClass}">
         <div class="pov-info-header">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 21v-2a4 4 0 0 0-3-3.87"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>נקודת מבט (POV)</span>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>סטטוס</span>
         </div>
-        <div class="pov-info-body">${scene.pov ? escapeHtml(scene.pov) : '<span class="empty-hint">לא הוגדר</span>'}</div>
+        <div class="pov-info-body">${scene.pov ? escapeHtml(scene.pov) : '<span class="empty-hint">ריק</span>'}</div>
       </div>
 
       ${scene.revealedInfo ? `
@@ -1010,7 +1010,7 @@
     if (elements.povFilterSelect) {
       const currentExact = state.filters.exactPov;
       const allPovs = Array.from(new Set(state.scenes.map(s => s.pov).filter(Boolean))).sort();
-      elements.povFilterSelect.innerHTML = '<option value="all">כל הרכבי ה-POV</option>' +
+      elements.povFilterSelect.innerHTML = '<option value="all">כל הסטטוסים</option>' +
         allPovs.map(p => `<option value="${escapeHtml(p)}" ${p === currentExact ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
     }
 
@@ -1133,7 +1133,7 @@
         }
       }
       if (state.filters.povChar !== 'all') filterDesc.push(`דמות: ${state.filters.povChar}`);
-      if (state.filters.exactPov !== 'all') filterDesc.push(`POV: ${state.filters.exactPov}`);
+      if (state.filters.exactPov !== 'all') filterDesc.push(`סטטוס: ${state.filters.exactPov}`);
       if (state.filters.location !== 'all') filterDesc.push(`מיקום: ${state.filters.location}`);
       if (state.filters.time !== 'all') filterDesc.push(`זמן: ${state.filters.time}`);
 
@@ -1429,7 +1429,7 @@
       ];
 
       const meta = [];
-      if (scene.pov) meta.push(`נקודת מבט (POV): ${scene.pov}`);
+      if (scene.pov) meta.push(`סטטוס: ${scene.pov}`);
       if (scene.location) meta.push(`מיקום: ${scene.location}`);
       if (scene.time) meta.push(`זמן עלילתי: ${scene.time}`);
       if (meta.length) parts.push(meta.join(' | '));
@@ -1443,7 +1443,7 @@
   }
 
   function generateCsvContent() {
-    const headers = ['סדר חדש', 'מזהה סצנה', 'כותרת הסצנה', 'זמן עלילתי', 'מיקום', 'נקודת מבט (POV)', 'תקציר העלילה', 'מידע שנחשף', 'מקור'];
+    const headers = ['סדר חדש', 'מזהה סצנה', 'כותרת הסצנה', 'זמן עלילתי', 'מיקום', 'סטטוס', 'תקציר העלילה', 'מידע שנחשף', 'מקור'];
     
     const escapeCsv = (str) => {
       if (!str) return '""';
