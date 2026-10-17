@@ -114,6 +114,13 @@ for ($i = 1; $i -lt $rows.Count; $i++) {
 
     $cleanId = if ($id) { $id.Trim() } else { "scene_$i" }
 
+    $s_sarah = [char]0x05E9 + [char]0x05E8 + [char]0x05D4
+    $s_closed = [char]0x05E1 + [char]0x05D2 + [char]0x05D5 + [char]0x05E8
+    $cleanSource = if ($source) { $source.Trim() } else { "" }
+    if ($cleanSource -eq $s_sarah -and [string]::IsNullOrWhiteSpace($pov)) {
+        $pov = $s_closed
+    }
+
     $sceneObj = [ordered]@{
         id = $cleanId
         title = if ($title) { $title.Trim() } else { "Scene $i" }
@@ -122,7 +129,7 @@ for ($i = 1; $i -lt $rows.Count; $i++) {
         pov = $pov
         summary = if ($summary) { $summary.Trim() } else { "" }
         revealedInfo = if ($revealed) { $revealed.Trim() } else { "" }
-        source = if ($source) { $source.Trim() } else { "" }
+        source = $cleanSource
     }
     $scenes.Add($sceneObj)
 }

@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v13 for 165 scenes update) ---
-  const STORAGE_KEY = 'book_scenes_editor_v13';
+  // --- Storage Key (bumped to v14 for Sarah status update) ---
+  const STORAGE_KEY = 'book_scenes_editor_v14';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -181,6 +181,9 @@
         if ((!scene.source || scene.source.trim() === '') && def.source) {
           scene.source = def.source.trim();
         }
+      }
+      if (scene.source && scene.source.trim() === 'שרה' && (!scene.pov || scene.pov.trim() === '')) {
+        scene.pov = 'סגור';
       }
       return scene;
     });
