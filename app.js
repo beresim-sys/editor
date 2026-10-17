@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v12 for clean restore) ---
-  const STORAGE_KEY = 'book_scenes_editor_v12';
+  // --- Storage Key (bumped to v13 for 165 scenes update) ---
+  const STORAGE_KEY = 'book_scenes_editor_v13';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -330,7 +330,8 @@
     // Priority 2: IndexedDB (durable browser storage, persists even if localStorage is wiped)
     try {
       const idbScenes = await SceneDB.load();
-      if (Array.isArray(idbScenes) && idbScenes.length > 0) {
+      const defaultLen = (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) ? DEFAULT_SCENES.length : 0;
+      if (Array.isArray(idbScenes) && idbScenes.length > 0 && idbScenes.length >= defaultLen) {
         state.scenes = sanitizeScenes(idbScenes);
         state.scenes = mergeLatestDefaults(state.scenes);
         state.originalScenes = JSON.parse(JSON.stringify(state.scenes));

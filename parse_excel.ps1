@@ -1,6 +1,22 @@
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$xlsx = (Get-ChildItem -Filter "*.xlsx" | Select-Object -First 1).FullName
-$zip = [System.IO.Compression.ZipFile]::OpenRead($xlsx)
+$xlsx = (Get-ChildItem -Filter "*.xlsx" | Where-Object { $_.Name -notlike "~$*" } | Select-Object -First 1).FullName
+
+$tempXlsx = Join-Path $env:TEMP "temp_scenes_parse.xlsx"
+try {
+    $fs = New-Object System.IO.FileStream($xlsx, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+    $ms = New-Object System.IO.MemoryStream
+    $fs.CopyTo($ms)
+    $fs.Dispose()
+} catch {
+    cmd /c copy /y "`"$xlsx`"" "`"$tempXlsx`"" | Out-Null
+    $bytes = [System.IO.File]::ReadAllBytes($tempXlsx)
+    $ms = New-Object System.IO.MemoryStream(,$bytes)
+}
+$excelBytes = $ms.ToArray()
+$ms.Position = 0
+
+$zip = New-Object System.IO.Compression.ZipArchive($ms, [System.IO.Compression.ZipArchiveMode]::Read)
 $entry = $zip.GetEntry("xl/sharedStrings.xml")
 $reader = New-Object System.IO.StreamReader($entry.Open(), [System.Text.Encoding]::UTF8)
 $xmlDoc = [xml]$reader.ReadToEnd()
@@ -19,6 +35,7 @@ $sheetReader = New-Object System.IO.StreamReader($sheetEntry.Open(), [System.Tex
 $sheetXml = [xml]$sheetReader.ReadToEnd()
 $sheetReader.Dispose()
 $zip.Dispose()
+$ms.Dispose()
 
 $w_id = [char]0x05DE + [char]0x05D6
 $w_pov = "pov"
@@ -111,6 +128,10 @@ for ($i = 1; $i -lt $rows.Count; $i++) {
 }
 
 Write-Host "Parsed scenes: $($scenes.Count)"
+if ($scenes.Count -eq 0) {
+    Write-Error "No scenes parsed! Aborting write."
+    exit 1
+}
 $json = $scenes | ConvertTo-Json -Depth 5
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) "scenes.json"), $json, [System.Text.Encoding]::UTF8)
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) "scenes-saved.json"), $json, [System.Text.Encoding]::UTF8)
@@ -118,7 +139,6 @@ $json = $scenes | ConvertTo-Json -Depth 5
 $jsContent = "// scenes-data.js`r`n// Total scenes: $($scenes.Count)`r`nconst DEFAULT_SCENES = $json;`r`n"
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) "scenes-data.js"), $jsContent, [System.Text.Encoding]::UTF8)
 
-$excelBytes = [System.IO.File]::ReadAllBytes($xlsx)
 $b64 = [System.Convert]::ToBase64String($excelBytes)
 $excelDataJs = "// excel-data.js`r`nconst EMBEDDED_EXCEL_B64 = `"$b64`";`r`n"
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) "excel-data.js"), $excelDataJs, [System.Text.Encoding]::UTF8)
