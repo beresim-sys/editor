@@ -67,14 +67,19 @@ body {
   min-height: 100vh;
 }
 
+/* Sticky Top Panel (Header + Toolbar + Source Filter Row) */
+.sticky-top-panel {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-card);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
 /* Header & Navbar */
 .app-header {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-light);
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  box-shadow: var(--shadow-xs);
 }
 
 .header-inner {

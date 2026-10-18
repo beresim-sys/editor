@@ -10,141 +10,144 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
   <div class="app-container">
 
-    <!-- Top Application Header -->
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="brand-section">
-          <div class="brand-logo-icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-            </svg>
-          </div>
-          <div class="brand-titles">
-            <h1>
-              <span>לוח עריכת סצנות לספר</span>
-              <span class="source-pill" id="dataSourceBadge">נטען מקובץ: סצנות לספר.xlsx</span>
-            </h1>
-            <span class="tagline">סידור עלילתי, מעקב נקודות מבט (POV), מקום, זמן וחשיפת מידע</span>
-          </div>
-        </div>
-
-        <div class="header-actions">
-          <!-- Hidden file input for manual XLSX selection if needed -->
-          <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" style="display: none;">
-
-          <button class="btn btn-save" id="btnSaveChanges" title="שמור את סדר הסצנות והשינויים בדפדפן (נשמר אוטומטית גם בכל פעולה)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
-            <span id="saveBtnText">שמור שינויים</span>
-          </button>
-
-          <button class="btn btn-secondary" id="btnExport" title="ייצוא הסדר החדש או העתקה ללוח">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-            </svg>
-            <span>ייצוא הסדר החדש</span>
-          </button>
-
-          <button class="btn btn-secondary" id="btnImportBackup" title="טעינת סדר סצנות מקובץ גיבוי (JSON)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m4-8l-4-4m0 0l-4 4m4-4v12"/>
-            </svg>
-            <span>טעינת גיבוי</span>
-          </button>
-          <input type="file" id="backupFileInput" accept=".json" style="display: none;">
-
-          <button class="btn btn-secondary" id="btnAddScene" title="הוסף סצנה חדשה ללוח">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span>סצנה חדשה</span>
-          </button>
-
-          <button class="btn btn-ghost" id="btnReloadFromExcel" title="טעינת סדר הסצנות ישירות מקובץ האקסל 'סצנות לספר.xlsx' המעודכן שבתיקייה">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            <span>איפוס לאקסל 🔄</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Toolbar: Search, Filters, and View Modes -->
-    <section class="toolbar-section">
-      <div class="toolbar-inner">
-        <!-- Search Input -->
-        <div class="search-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חופשי (כותרת, תקציר, מידע שנחשף, מקום, זמן)..." aria-label="חיפוש סצנה">
-          <button id="searchClearBtn" class="search-clear-btn" title="נקה חיפוש">&times;</button>
-        </div>
-
-        <!-- Filter Controls -->
-        <div class="filter-controls">
-          <!-- POV Quick Character Chips -->
-          <div class="pov-chips-container" id="povChipsContainer" title="סינון מהיר לפי דמויות מרכזיות">
-            <!-- Dynamically populated -->
+    <!-- Sticky Top Panel: Header, Toolbar, and Source Filter Row -->
+    <div class="sticky-top-panel">
+      <!-- Top Application Header -->
+      <header class="app-header">
+        <div class="header-inner">
+          <div class="brand-section">
+            <div class="brand-logo-icon">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+            </div>
+            <div class="brand-titles">
+              <h1>
+                <span>לוח עריכת סצנות לספר</span>
+                <span class="source-pill" id="dataSourceBadge">נטען מקובץ: סצנות לספר.xlsx</span>
+              </h1>
+              <span class="tagline">סידור עלילתי, מעקב נקודות מבט (POV), מקום, זמן וחשיפת מידע</span>
+            </div>
           </div>
 
-          <!-- Status Dropdown Filter -->
-          <select id="povFilterSelect" class="filter-select" aria-label="סינון לפי סטטוס">
-            <option value="all">כל הסטטוסים</option>
-          </select>
+          <div class="header-actions">
+            <!-- Hidden file input for manual XLSX selection if needed -->
+            <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" style="display: none;">
 
-          <!-- Source Dropdown Filter -->
-          <select id="sourceFilterSelect" class="filter-select" aria-label="סינון לפי מקור">
-            <option value="all">כל המקורות</option>
-          </select>
+            <button class="btn btn-save" id="btnSaveChanges" title="שמור את סדר הסצנות והשינויים בדפדפן (נשמר אוטומטית גם בכל פעולה)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span id="saveBtnText">שמור שינויים</span>
+            </button>
 
-          <!-- Location Dropdown -->
-          <select id="locationFilterSelect" class="filter-select" aria-label="סינון לפי מקום">
-            <option value="all">כל המיקומים</option>
-          </select>
+            <button class="btn btn-secondary" id="btnExport" title="ייצוא הסדר החדש או העתקה ללוח">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+              </svg>
+              <span>ייצוא הסדר החדש</span>
+            </button>
 
-          <!-- Time Dropdown -->
-          <select id="timeFilterSelect" class="filter-select" aria-label="סינון לפי זמן עלילתי">
-            <option value="all">כל הזמנים העלילתיים</option>
-          </select>
+            <button class="btn btn-secondary" id="btnImportBackup" title="טעינת סדר סצנות מקובץ גיבוי (JSON)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m4-8l-4-4m0 0l-4 4m4-4v12"/>
+              </svg>
+              <span>טעינת גיבוי</span>
+            </button>
+            <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+
+            <button class="btn btn-secondary" id="btnAddScene" title="הוסף סצנה חדשה ללוח">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              <span>סצנה חדשה</span>
+            </button>
+
+            <button class="btn btn-ghost" id="btnReloadFromExcel" title="טעינת סדר הסצנות ישירות מקובץ האקסל 'סצנות לספר.xlsx' המעודכן שבתיקייה">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              <span>איפוס לאקסל 🔄</span>
+            </button>
+          </div>
         </div>
+      </header>
 
-        <!-- View Mode Switcher -->
-        <div class="view-mode-group">
-          <button id="viewGridBtn" class="view-mode-btn active" title="תצוגת רשת כרטיסיות">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span>רשת</span>
-          </button>
-          <button id="viewTimelineBtn" class="view-mode-btn" title="תצוגת ציר עלילה כרונולוגי רציף">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 3v6m0 6v6"/></svg>
-            <span>ציר רציף</span>
-          </button>
-          <button id="viewCompactBtn" class="view-mode-btn" title="תצוגה קומפקטית לסידור מהיר בין 165 הסצנות">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-            <span>קומפקטי</span>
-          </button>
-        </div>
-      </div>
-    </section>
+      <!-- Toolbar: Search, Filters, and View Modes -->
+      <section class="toolbar-section">
+        <div class="toolbar-inner">
+          <!-- Search Input -->
+          <div class="search-wrapper">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חופשי (כותרת, תקציר, מידע שנחשף, מקום, זמן)..." aria-label="חיפוש סצנה">
+            <button id="searchClearBtn" class="search-clear-btn" title="נקה חיפוש">&times;</button>
+          </div>
 
-    <!-- Dedicated Source Quick Buttons Bar -->
-    <div class="source-filter-row">
-      <div class="source-filter-inner">
-        <div class="source-filter-label" title="ניתן לבחור מספר מקורות יחד באמצעות לחיצה עם מקש Ctrl (או Cmd)">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-          <span>סינון מהיר לפי מקור:</span>
-          <span class="ctrl-multi-hint">(לבחירה מרובה: Ctrl + לחיצה)</span>
+          <!-- Filter Controls -->
+          <div class="filter-controls">
+            <!-- POV Quick Character Chips -->
+            <div class="pov-chips-container" id="povChipsContainer" title="סינון מהיר לפי דמויות מרכזיות">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- Status Dropdown Filter -->
+            <select id="povFilterSelect" class="filter-select" aria-label="סינון לפי סטטוס">
+              <option value="all">כל הסטטוסים</option>
+            </select>
+
+            <!-- Source Dropdown Filter -->
+            <select id="sourceFilterSelect" class="filter-select" aria-label="סינון לפי מקור">
+              <option value="all">כל המקורות</option>
+            </select>
+
+            <!-- Location Dropdown -->
+            <select id="locationFilterSelect" class="filter-select" aria-label="סינון לפי מקום">
+              <option value="all">כל המיקומים</option>
+            </select>
+
+            <!-- Time Dropdown -->
+            <select id="timeFilterSelect" class="filter-select" aria-label="סינון לפי זמן עלילתי">
+              <option value="all">כל הזמנים העלילתיים</option>
+            </select>
+          </div>
+
+          <!-- View Mode Switcher -->
+          <div class="view-mode-group">
+            <button id="viewGridBtn" class="view-mode-btn active" title="תצוגת רשת כרטיסיות">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>רשת</span>
+            </button>
+            <button id="viewTimelineBtn" class="view-mode-btn" title="תצוגת ציר עלילה כרונולוגי רציף">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 3v6m0 6v6"/></svg>
+              <span>ציר רציף</span>
+            </button>
+            <button id="viewCompactBtn" class="view-mode-btn" title="תצוגה קומפקטית לסידור מהיר בין 165 הסצנות">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+              <span>קומפקטי</span>
+            </button>
+          </div>
         </div>
-        <div class="source-chips-container" id="sourceChipsContainer">
-          <!-- Dynamically populated buttons for each source -->
+      </section>
+
+      <!-- Dedicated Source Quick Buttons Bar -->
+      <div class="source-filter-row">
+        <div class="source-filter-inner">
+          <div class="source-filter-label" title="ניתן לבחור מספר מקורות יחד באמצעות לחיצה עם מקש Ctrl (או Cmd)">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            <span>סינון מהיר לפי מקור:</span>
+            <span class="ctrl-multi-hint">(לבחירה מרובה: Ctrl + לחיצה)</span>
+          </div>
+          <div class="source-chips-container" id="sourceChipsContainer">
+            <!-- Dynamically populated buttons for each source -->
+          </div>
         </div>
       </div>
     </div>
