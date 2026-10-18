@@ -748,6 +748,7 @@
   function getSourceThemeClass(sourceText) {
     if (!sourceText) return 'source-theme-generic';
     const s = sourceText.trim();
+    if (s.includes('שירה')) return 'source-theme-shira';
     if (s.includes('שרה')) return 'source-theme-shara';
     if (s.includes('רפאל')) return 'source-theme-raphael';
     if (s.includes('סלווטור')) return 'source-theme-salvatore';
