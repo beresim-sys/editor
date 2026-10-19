@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  // --- Storage Key (bumped to v14 for Sarah status update) ---
-  const STORAGE_KEY = 'book_scenes_editor_v14';
+  // --- Storage Key (bumped to v15 for 174 recovered scenes) ---
+  const STORAGE_KEY = 'book_scenes_editor_v15';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
@@ -307,6 +307,21 @@
   }
 
   async function loadInitialData() {
+    const defaultLen = (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) ? DEFAULT_SCENES.length : 0;
+
+    // Migrate from v14 only if it has at least as many scenes as the recovered baseline (174)
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      try {
+        const prevV14 = localStorage.getItem('book_scenes_editor_v14');
+        if (prevV14) {
+          const parsedV14 = JSON.parse(prevV14);
+          if (Array.isArray(parsedV14) && parsedV14.length >= defaultLen) {
+            localStorage.setItem(STORAGE_KEY, prevV14);
+          }
+        }
+      } catch (e) {}
+    }
+
     // Priority 1: Active localStorage
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -333,7 +348,6 @@
     // Priority 2: IndexedDB (durable browser storage, persists even if localStorage is wiped)
     try {
       const idbScenes = await SceneDB.load();
-      const defaultLen = (typeof DEFAULT_SCENES !== 'undefined' && Array.isArray(DEFAULT_SCENES)) ? DEFAULT_SCENES.length : 0;
       if (Array.isArray(idbScenes) && idbScenes.length > 0 && idbScenes.length >= defaultLen) {
         state.scenes = sanitizeScenes(idbScenes);
         state.scenes = mergeLatestDefaults(state.scenes);
@@ -625,18 +639,39 @@
 
   function syncToServerIfAvailable() {
     if (window.location.protocol.startsWith('http')) {
-      fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify(state.scenes)
-      }).then(res => {
-        if (res.ok && elements.saveStatusIndicator) {
+      const payload = JSON.stringify(state.scenes);
+      const markSaved = () => {
+        if (elements.saveStatusIndicator) {
           const current = elements.saveStatusIndicator.textContent;
           if (!current.includes('בקובץ')) {
             elements.saveStatusIndicator.textContent = current + ' | נשמר בקובץ המקומי ✓';
           }
         }
-      }).catch(() => {});
+      };
+
+      fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: payload
+      }).then(res => {
+        if (res.ok) {
+          markSaved();
+        } else if (!window.location.hostname.includes('localhost') && window.location.hostname !== '127.0.0.1') {
+          fetch('http://localhost:8765/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: payload
+          }).then(r => { if (r.ok) markSaved(); }).catch(() => {});
+        }
+      }).catch(() => {
+        if (!window.location.hostname.includes('localhost') && window.location.hostname !== '127.0.0.1') {
+          fetch('http://localhost:8765/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: payload
+          }).then(r => { if (r.ok) markSaved(); }).catch(() => {});
+        }
+      });
     }
   }
 
