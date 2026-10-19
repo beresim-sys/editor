@@ -973,7 +973,7 @@ body.multi-select-mode .source-chip {
 .pov-malka { background: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
 .pov-louisa { background: #fdf4ff; color: #a21caf; border-color: #f5d0fe; }
 .pov-souzette { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
-.pov-closed-pill { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+.pov-closed-pill { background: #bae6fd; color: #0c4a6e; border-color: #38bdf8; font-weight: 700; }
 .pov-generic { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
 
 .location-pill {
@@ -1057,25 +1057,29 @@ body.multi-select-mode .source-chip {
   font-style: italic;
 }
 
-/* Red styling when POV is "סגור" */
+/* Status: "סגור" - Full Light Blue Background with Bold Text */
 .pov-info-box.pov-closed {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #fca5a5;
-  border-right: 3px solid #ef4444;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.08);
+  background: #7dd3fc;
+  border: 1px solid #38bdf8;
+  border-right: 4px solid #0284c7;
+  box-shadow: 0 2px 5px rgba(56, 189, 248, 0.25);
 }
 
 .pov-info-box.pov-closed .pov-info-header {
-  color: #dc2626;
+  color: #000000;
+  font-weight: 900;
 }
 
 .pov-info-box.pov-closed .pov-info-header svg {
-  color: #ef4444;
+  color: #000000;
+  stroke-width: 2.5;
 }
 
 .pov-info-box.pov-closed .pov-info-body {
-  color: #b91c1c;
-  font-weight: 700;
+  color: #000000;
+  font-weight: 900;
+  font-size: 0.84rem;
+  letter-spacing: 0.2px;
 }
 
 /* Status: "לכתוב את הסצנה" - Full Red Background with Bold Black Text */
@@ -1148,14 +1152,16 @@ body.multi-select-mode .source-chip {
 }
 
 .quick-status-btn.status-btn-closed {
-  background: #fff1f2;
-  border-color: #fecdd3;
-  color: #be123c;
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
 }
 
 .quick-status-btn.status-btn-closed:hover {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #7dd3fc;
+  color: #000000;
+  border-color: #38bdf8;
+  font-weight: 800;
 }
 
 .quick-status-btn.status-btn-clear:hover {
