@@ -1059,10 +1059,10 @@ body.multi-select-mode .source-chip {
 
 /* Status: "סגור" - Full Light Blue Background with Bold Text */
 .pov-info-box.pov-closed {
-  background: #7dd3fc;
-  border: 1px solid #38bdf8;
-  border-right: 4px solid #0284c7;
-  box-shadow: 0 2px 5px rgba(56, 189, 248, 0.25);
+  background: #bbf7d0;
+  border: 1px solid #4ade80;
+  border-right: 4px solid #16a34a;
+  box-shadow: 0 2px 5px rgba(74, 222, 128, 0.25);
 }
 
 .pov-info-box.pov-closed .pov-info-header {
@@ -1084,10 +1084,10 @@ body.multi-select-mode .source-chip {
 
 /* Status: "לכתוב את הסצנה" - Full Red Background with Bold Black Text */
 .pov-info-box.status-write-scene {
-  background: #ef4444;
-  border: 1px solid #dc2626;
-  border-right: 4px solid #991b1b;
-  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25);
+  background: #fecaca;
+  border: 1px solid #f87171;
+  border-right: 4px solid #dc2626;
+  box-shadow: 0 2px 5px rgba(248, 113, 113, 0.25);
 }
 
 .pov-info-box.status-write-scene .pov-info-header {

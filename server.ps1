@@ -86,8 +86,9 @@ while ($listener.IsListening) {
                 $res.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 $res.AddHeader("Content-Disposition", "inline; filename=`"scenes.xlsx`"")
                 $res.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
-                $res.ContentLength64 = $bytes.Length
-                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+            $res.ContentLength64 = $bytes.Length
+            $res.OutputStream.Write($bytes, 0, $bytes.Length)
                 $res.StatusCode = 200
                 Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Served Excel file: $($xlsx.Name) ($($bytes.Length) bytes)" -ForegroundColor Green
             } catch {
@@ -153,6 +154,7 @@ while ($listener.IsListening) {
 
         try {
             $bytes = ReadBytesShared($targetFile)
+            $res.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
             $res.ContentLength64 = $bytes.Length
             $res.OutputStream.Write($bytes, 0, $bytes.Length)
             $res.StatusCode = 200
