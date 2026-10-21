@@ -1059,10 +1059,10 @@ body.multi-select-mode .source-chip {
 
 /* Status: "סגור" - Full Light Blue Background with Bold Text */
 .pov-info-box.pov-closed {
-  background: #bbf7d0;
-  border: 1px solid #4ade80;
-  border-right: 4px solid #16a34a;
-  box-shadow: 0 2px 5px rgba(74, 222, 128, 0.25);
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-right: 4px solid #34d399;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.12);
 }
 
 .pov-info-box.pov-closed .pov-info-header {
