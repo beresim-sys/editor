@@ -765,6 +765,7 @@
 
   function getPovStyleClass(povText) {
     if (!povText) return 'pov-generic';
+    if (povText.includes('נמחק')) return 'status-deleted-pill';
     if (povText.includes('לכתוב')) return 'status-write-scene-pill';
     if (povText.includes('סגור')) return 'pov-closed-pill';
     if (povText.includes('שרה')) return 'pov-shara';
@@ -807,10 +808,13 @@
 
     const povClass = getPovStyleClass(scene.pov);
     const cleanPov = scene.pov ? scene.pov.trim().replace(/^["']|["']$/g, '').trim() : '';
+    const isDeleted = cleanPov.includes('נמחק');
     const isWriteScene = cleanPov.includes('לכתוב');
     const isClosedPov = cleanPov === 'סגור';
     let povBoxClass = '';
-    if (isWriteScene) {
+    if (isDeleted) {
+      povBoxClass = 'status-deleted';
+    } else if (isWriteScene) {
       povBoxClass = 'status-write-scene';
     } else if (isClosedPov) {
       povBoxClass = 'pov-closed';
@@ -1059,7 +1063,7 @@
     // 2. Exact POV Dropdown
     if (elements.povFilterSelect) {
       const currentExact = state.filters.exactPov;
-      const defaultStatuses = ['לכתוב את הסצנה', 'סגור'];
+      const defaultStatuses = ['לכתוב את הסצנה', 'סגור', 'נמחק'];
       const sceneStatuses = state.scenes.map(s => s.pov).filter(Boolean);
       const allPovs = Array.from(new Set([...defaultStatuses, ...sceneStatuses])).sort();
       elements.povFilterSelect.innerHTML = '<option value="all">כל הסטטוסים</option>' +
