@@ -8,12 +8,13 @@
   'use strict';
 
   // --- Storage Key (bumped to v15 for 174 recovered scenes) ---
-  const STORAGE_KEY = 'book_scenes_editor_v15';
+  const STORAGE_KEY = 'book_scenes_editor_v16';
 
   // --- IndexedDB Database Manager for Durable Local Persistence ---
   const SceneDB = {
     DB_NAME: 'SceneFlowEditorDB',
     STORE_NAME: 'scenes_store',
+    RECORD_KEY: 'active_sequence_v16',
     VERSION: 1,
 
     open() {
@@ -42,7 +43,7 @@
         try {
           const tx = db.transaction(this.STORE_NAME, 'readwrite');
           const store = tx.objectStore(this.STORE_NAME);
-          store.put(scenes, 'active_sequence');
+          store.put(scenes, this.RECORD_KEY);
           tx.oncomplete = () => resolve(true);
           tx.onerror = () => resolve(false);
         } catch (e) {
@@ -58,7 +59,7 @@
         try {
           const tx = db.transaction(this.STORE_NAME, 'readonly');
           const store = tx.objectStore(this.STORE_NAME);
-          const req = store.get('active_sequence');
+          const req = store.get(this.RECORD_KEY);
           req.onsuccess = () => resolve(req.result || null);
           req.onerror = () => resolve(null);
         } catch (e) {
@@ -312,7 +313,7 @@
     // Migrate from v14 only if it has at least as many scenes as the recovered baseline (174)
     if (!localStorage.getItem(STORAGE_KEY)) {
       try {
-        const prevV14 = localStorage.getItem('book_scenes_editor_v14');
+        const prevV14 = null;
         if (prevV14) {
           const parsedV14 = JSON.parse(prevV14);
           if (Array.isArray(parsedV14) && parsedV14.length >= defaultLen) {
@@ -348,7 +349,7 @@
     // Priority 2: IndexedDB (durable browser storage, persists even if localStorage is wiped)
     try {
       const idbScenes = await SceneDB.load();
-      if (Array.isArray(idbScenes) && idbScenes.length > 0 && idbScenes.length >= defaultLen) {
+      if (Array.isArray(idbScenes) && idbScenes.length > 0) {
         state.scenes = sanitizeScenes(idbScenes);
         state.scenes = mergeLatestDefaults(state.scenes);
         state.originalScenes = JSON.parse(JSON.stringify(state.scenes));
